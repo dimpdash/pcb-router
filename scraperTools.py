@@ -48,3 +48,7 @@ def getFileData(id):
 def getPCB_data(text):
     return json.loads(text)["result"]["dataStr"]["canvas"]
 
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
