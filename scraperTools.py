@@ -22,11 +22,18 @@ def getFileIds(projectLink):
     projectPage = requests.get("https://oshwlab.com" + projectLink)
     projectPageSoup = BeautifulSoup(projectPage.content, 'html.parser')
 
-    fileLink = projectPageSoup.find("a", text="Open all in editor").get('href')
-    print(fileLink)
-    ids = re.split(r'\||=',fileLink)
-    ids = ids[1:]
-    ids.remove('')
+    
+    button = projectPageSoup.find("a", text="Open all in editor")
+    if button is not None:
+        fileLink = button.get('href')
+        print(fileLink)
+        ids = re.split(r'\||=',fileLink)
+        ids = ids[1:]
+        if '' in ids:
+            ids.remove('')
+    else:
+        ids = []
+
     return ids
 
 def getFileData(id):
