@@ -9,10 +9,10 @@ with open("projectLinks954.data", "rb") as fileHandle:
 
 
 projectIds = []
-with open("ids tmp 32.data", "rb") as fileHandle:
+with open("ids tmp 3.data", "rb") as fileHandle:
     projectIds = pickle.load(fileHandle)
 
-count = 3200
+count = 3300
 subcount = 0
 for projectLink in projectLinks[count:]:
     print("Project number ", count)
