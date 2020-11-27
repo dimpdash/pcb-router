@@ -1,0 +1,12 @@
+Collecting pycairo
+  Using cached pycairo-1.20.0.tar.gz (344 kB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+    Preparing wheel metadata: started
+    Preparing wheel metadata: finished with status 'done'
+Building wheels for collected packages: pycairo
+  Building wheel for pycairo (PEP 517): started
+  Building wheel for pycairo (PEP 517): finished with status 'error'
+Failed to build pycairo
