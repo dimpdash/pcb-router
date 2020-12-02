@@ -2,6 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import json
+import pickle
+import sys
 
 def getProjectLinksOffpage(page):
 
@@ -40,15 +42,45 @@ def getFileData(id):
     projectSourceAPI_URL = "https://easyeda.com/api/documents/" + id + "?version=6.4.7&uuid=" + id
     print(projectSourceAPI_URL)
     projectSource = requests.get(projectSourceAPI_URL)
-
-    projectSourceSoup = BeautifulSoup(projectSource.content, 'html.parser')
-    fileData = projectSourceSoup.get_text()
-    return fileData
+    return projectSource.json()
 
 def getPCB_data(text):
-    return json.loads(text)["result"]["dataStr"]
+    if '"docType":3' not in text:
+        return None
+    
+    start = text.index('shape":[') + len('shape":[')
+    openCount = 0
+    end = None
+    for i in range(start, len(text)):
+        if text[i] =="]":
+            openCount -= 1
+            if openCount == -1:
+                end = i
+                break
+        elif text[i] == "[":
+            openCount += 1
+    if end == None:
+        return None #file has mismatching [ ] pairs
+
+    shapeData = text[start:end]
+
+    jsonData = json.loads(text[:start-1] +'"tmp"'+ text[end+1:])
+    if "result" in jsonData:
+        if "dataStr" in jsonData["result"]:
+            jsonData["result"]["dataStr"] = shapeData
+            return jsonData
+    return None
 
 def chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
+
+
+def getDataFromFile(path):
+    with open(path, 'rb') as fileHandle:
+        return pickle.load(fileHandle)
+
+def saveDataToFile(path, data):
+    with open(path, "wb") as fileHandle:
+        pickle.dump(data, fileHandle)

@@ -5,9 +5,9 @@ from multiprocessing.pool import ThreadPool
 with open("ids 23819.data", "rb") as fileHandle:
     fileIds = pickle.load(fileHandle)
 
-batches = chunks(fileIds[7040:], 5000)
-count = 1
-fileCount = 1
+batches = chunks(fileIds, 5000)
+count = 0
+fileCount = 0
 for batch in batches: 
     rawFiles = []
     with ThreadPool(10) as pool:
