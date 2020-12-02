@@ -26,7 +26,7 @@ def parsePoints(pointText):
         return [pair for pair in zip(xcoords, ycoords)]
 
 def createDictForAttributes(shape):
-    shapeTypes = {'F', 'SOLIDREGION', 'R', 'A', 'LIB', 'HOLE', 'COPPERAREA', 'ARC', 'T', 'SVGNODE', 'DIMENSION', 'W', 'RECT', 'VIA', 'TRACK', 'TEXT', 'P', 'N', 'PG', 'E', 'PAD', 'PL', 'CIRCLE', 'J'}
+    shapeTypes = {'F', 'SOLIDREGION', 'R', 'A', 'LIB', 'HOLE', 'PL', 'COPPERAREA', 'ARC', 'PLANEZONE', 'T', 'SVGNODE', 'DIMENSION', 'W', 'RECT', 'VIA', 'TRACK', 'TEXT', 'N', 'P', 'PG', 'SHEET', 'PAD', 'PROTRACTOR', 'E', 'CIRCLE', 'J'}
     attributeData = None
     if "TRACK" in shape:
         attributes = shape["TRACK"].split("~")
@@ -42,41 +42,42 @@ def createDictForAttributes(shape):
         attributes = shape["VIA"].split("~")
         attributeData = dict()
 
-        attributeData["loc"] = (attributes[0],attributes[1])
-        attributeData["outerDiameter"] = attributes[2]
+        attributeData["x"] = attributes[0]
+        attributeData["y"] = attributes[1]
+        attributeData["diameter"] = attributes[2]
         attributeData["net"] = attributes[3]
-        attributeData["innerDiameter"] = attributes[4]
+        attributeData["holeRadius"] = attributes[4]
         attributeData["id"] = attributes[5]
 
     if "HOLE" in shape:
         attributes = shape["HOLE"].split("~")
         attributeData = dict()
 
-        attributeData["loc"] = (attributes[0],attributes[1])
+        attributeData["x"] = attributes[0]
+        attributeData["y"] = attributes[1]
         attributeData["diameter"] = attributes[2]
         attributeData["id"] = attributes[3]
-        try:
-            attributes["undetected"] = attributes[5:]
-        except:
-            pass
-    
+
     if "PAD" in shape:
         attributes = shape["PAD"].split("~")
         attributeData = dict()
 
         attributeData["type"] = attributes[0]
-        attributeData["loc"] = (attributes[1],attributes[2])
+        attributeData["x"] = attributes[1]
+        attributeData["y"] = attributes[2]
         attributeData["width"] = attributes[3]
         attributeData["height"] = attributes[4]
         attributeData["layer"] = attributes[5]
+        attributeData["net"] = attributes[6]
+        attributeData["rot"] = attributes[10]
+        attributeData["id"] = attributes[11]
 
         if attributeData["type"] == "ELLIPSE":
-            attributeData["net"] = attributes[6]
+            
             # attributeData["points"] = parsePoints(attributes[9])
             attributeData["id"] = attributes[11]
 
         elif attributeData["type"] == "RECT":
-            attributeData["net"] = attributes[7]
             # attributeData["points"] = parsePoints(attributes[9])
             attributeData["id"] = attributes[11]
 
@@ -94,15 +95,15 @@ def createDictForAttributes(shape):
         attributes = shape["LIB"].split("~")
         attributeData = dict()
 
-        attributeData["loc"] = (attributes[0], attributes[1])
-        attributeData["package"] = attributes[2].split("`")[1]
+        attributeData["x"] = attributes[0]
+        attributeData["y"] = attributes[1]
+        attributeData["rot"] = attributes[3]
         attributeData["id"] = attributes[5]
 
     if attributeData == None:
         for key in shape.keys():
             if key not in shapeTypes:
                 print(key," is not a known shape type")
-                raise
         # attributeData = list(shape.values())[0]
     return attributeData
 
@@ -119,3 +120,6 @@ def createDictForShapes(shapeDatas):
         else:
             pcbParsed.append({shapeType:shapeData})
     return pcbParsed
+
+def convertPCBcompressedToJSON(pcb):
+        return createDictForShapes(pcb["result"]["dataStr"]["shape"])
