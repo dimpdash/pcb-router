@@ -9,11 +9,16 @@ for i in range(0, 10 + 1):
         rawDataFiles = pickle.load(fileHandle)
 
     count = 0
+    failCount = 0
     for rawData in rawDataFiles:
         print(count, i)
-        pcbData = getPCB_data(rawData)
-        if pcbData != None:
-            pcbDataFiles.append(pcbData)
-        count += 1
+        if rawData["success"] == True:
+            if rawData["result"]["docType"] == 3:
+                pcbDataFiles.append(rawData)
+            count += 1
+        else:
+            failCount += 1
     with open("./pcb files/pcb files " + str(i) + ".data", "wb") as fileHandle:
         pickle.dump(pcbDataFiles, fileHandle)
+
+    print(failCount)

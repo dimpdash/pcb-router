@@ -1,0 +1,2 @@
+Shape Styles
+{'', 'F', 'SOLIDREGION', 'R', 'A', 'LIB', 'HOLE', 'PL', 'COPPERAREA', 'ARC', 'PLANEZONE', 'T', 'SVGNODE', 'DIMENSION', 'W', 'RECT', 'VIA', 'TRACK', 'TEXT', 'N', 'P', 'PG', 'SHEET', 'PAD', 'PROTRACTOR', 'E', 'CIRCLE', 'J'}
