@@ -20,10 +20,31 @@ def getFeatures(shapeData):
     return shapeTypes
 
 def parsePoints(pointText):
-        coordList = pointText.split()
-        xcoords = coordList[0::2]
-        ycoords = coordList[1::2]
-        return [pair for pair in zip(xcoords, ycoords)]
+    points = []
+    coordList = pointText.split()
+    xcoords = coordList[0::2]
+    ycoords = coordList[1::2]
+    for pair in zip(xcoords, ycoords):
+        points.append((float(pair[0]), float(pair[1])))
+
+    return points
+
+def casteAttributeData(shapeData):
+    intAttributes = ["layer"]
+    for intAttrbute in intAttributes:
+        if intAttrbute in shapeData:
+            shapeData[intAttrbute] = int(shapeData[intAttrbute])
+
+    floatAttributes = ["x", "y", "width", "height", "rot"]
+    for floatAttribute in floatAttributes:
+        if floatAttribute in shapeData:
+            try:
+                shapeData[floatAttribute] = float(shapeData[floatAttribute])
+            except ValueError:
+                shapeData[floatAttribute] = 0.0
+                print("For ", floatAttribute, ": ", shapeData[floatAttribute], "was not decimal")
+
+    return shapeData
 
 def createDictForAttributes(shape):
     shapeTypes = {'F', 'SOLIDREGION', 'R', 'A', 'LIB', 'HOLE', 'PL', 'COPPERAREA', 'ARC', 'PLANEZONE', 'T', 'SVGNODE', 'DIMENSION', 'W', 'RECT', 'VIA', 'TRACK', 'TEXT', 'N', 'P', 'PG', 'SHEET', 'PAD', 'PROTRACTOR', 'E', 'CIRCLE', 'J'}
@@ -97,15 +118,21 @@ def createDictForAttributes(shape):
 
         attributeData["x"] = attributes[0]
         attributeData["y"] = attributes[1]
-        attributeData["rot"] = attributes[3]
+        if attributes[3] == '': # non rotation for lib is left empty
+            attributeData["rot"] = '0'
+        else:
+            attributeData["rot"] = attributes[3]
         attributeData["id"] = attributes[5]
 
     if attributeData == None:
         for key in shape.keys():
             if key not in shapeTypes:
                 print(key," is not a known shape type")
-        # attributeData = list(shape.values())[0]
-    return attributeData
+        
+        return attributeData
+    else:
+        return casteAttributeData(attributeData)
+    
 
 def createDictForShapes(shapeDatas):
     pcbParsed = []

@@ -8,4 +8,4 @@ for i in range(0, 10 + 1):
     pcbsJSON = []
     for pcb in pcbs:
         pcbsJSON.append(convertPCBcompressedToJSON(pcb))
-    saveDataToFile("./pcb files json/ pcb files json " + str(i) + ".data", pcbsJSON)
+    saveDataToFile("./pcb files json/pcb files json " + str(i) + ".data", pcbsJSON)
