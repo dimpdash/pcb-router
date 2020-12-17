@@ -46,39 +46,20 @@ def extractRouteElements(shapes):
 def compressRouteData(route):
     #assumes route is track
     routeList = []
-
-    for line in route["points"]:
-        routeCompressed = [None]*5
+    lastPoint = route["points"][0]
+    for point in route["points"][1:]: #takes each pair of points, so skips first
+        routeCompressed = [None]*7
         routeCompressed[0] = route["width"]
         routeCompressed[1] = route["layer"]
         routeCompressed[2] = route["net"]
-        routeCompressed[3] = line[0]
-        routeCompressed[4] = line[0]
+        routeCompressed[3] = point[0]
+        routeCompressed[4] = point[1]
+        routeCompressed[5] = lastPoint[0]
+        routeCompressed[6] = lastPoint[1]        
 
         routeList.append(routeCompressed)
+        lastPoint = point
 
     return routeList
 
-trainInputs = []
-testInputs = []
-trainOutputs = []
-testOutputs = []
 
-for i in range(0, 10 + 1):
-    print(i)
-    pcbs = getDataFromFile("./pcb files json/pcb files json " + str(i) + ".data")
-   
-    for pcb in pcbs:
-        if random.randint(1,10) == 1: # testData
-            testInputs.append(extractPads(pcb))
-            testOutputs.append(extractRouteElements(pcb))
-        else: #trainData
-            trainInputs.append(extractPads(pcb))
-            trainOutputs.append(extractRouteElements(pcb))
-
-
-trainData = [trainInputs, trainOutputs]
-testData = [testInputs, testOutputs]
-
-saveDataToFile("./model data/train.data", trainData)
-saveDataToFile("./model data/test.data", testData)

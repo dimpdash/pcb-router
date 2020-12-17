@@ -4,7 +4,7 @@ import re
 import json
 import pickle
 import sys
-
+import os
 def getProjectLinksOffpage(page):
 
     URL = 'https://oshwlab.com/explore?projectSort=updatedTime&page=' + str(page)
@@ -84,3 +84,35 @@ def getDataFromFile(path):
 def saveDataToFile(path, data):
     with open(path, "wb") as fileHandle:
         pickle.dump(data, fileHandle)
+
+def seqSaveDataToFile(path, data):
+    with open(path, 'ab') as output:  # Note: `ab` appends the data
+        pickle.dump(data, output)
+
+def seqGetDataFromFile(path):
+    objs = []
+    with open(path, 'rb') as f:
+        while 1:
+            try:
+                objs.append(pickle.load(f))           
+            except EOFError:
+                break
+    return objs
+
+def getNthFromFile(path, i):
+    with open(path, 'rb') as f:
+        count = 0
+        while(count < i):
+            try:
+                pickle.load(f)           
+            except EOFError:
+                print("i exceeds list size")
+                raise
+            count += 1
+        return pickle.load(f)
+
+def deleteOldFile(path):
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        print("File not found")

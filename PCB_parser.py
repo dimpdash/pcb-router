@@ -26,7 +26,8 @@ def parsePoints(pointText):
     ycoords = coordList[1::2]
     for pair in zip(xcoords, ycoords):
         points.append((float(pair[0]), float(pair[1])))
-
+    if points == []:
+        print('A track contained no point information. Returning []. Check for [] to handle exception')
     return points
 
 def casteAttributeData(shapeData):
@@ -138,7 +139,10 @@ def createDictForShapes(shapeDatas):
     pcbParsed = []
     for shape in shapeDatas:
         [shapeType, rawShapeData] = shape.split("~", maxsplit=1)
+        
         shapeData = createDictForAttributes({shapeType:rawShapeData})
+        if shapeType == "TRACK" and shapeData['points'] == []: #Some tracks have zeros points #TODO investigate why
+            break
         if shapeType == "LIB":
             subshapes = shape.split("#@$")[1:]
             if subshapes != ['']:
