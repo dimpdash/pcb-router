@@ -1,12 +1,21 @@
 import random
 from scraperTools import getDataFromFile, saveDataToFile
+from tensorflow.keras.preprocessing.text import one_hot as one_hot_text
+from tensorflow import one_hot
+import numpy as np
+
 random.seed("a")
 
+net_vocab_size = 250
+max_net_char_len = 8
+maxLayers = 32 + 2
 
 def extractPads(shapes):
     padsList = []
     for shape in shapes:
+        print(shape)
         if "PAD" in shape:
+            print('hers shap')
             padsList.append(compressPadData(shape["PAD"]))
         elif "LIB" in shape:
             padsList = padsList + extractPads(shape["LIB"])
@@ -15,17 +24,15 @@ def extractPads(shapes):
 
 def compressPadData(pad):
     
-    padTypes = {"RECT": b'100',"OVAL":b'010', "ELLIPSE":b'001', "POLYGON": b'000'}
-    padCompressed = [None]*8 
-    
-    padCompressed[0] = padTypes[pad["type"]]
-    padCompressed[1] = pad['x']
-    padCompressed[2] = pad['y']
-    padCompressed[3] = pad['width']
-    padCompressed[4] = pad['height']
-    padCompressed[5] = pad['layer']
-    padCompressed[6] = pad['net']
-    padCompressed[7] = pad['rot']
+    # padTypes = {"RECT": [1, 0, 0],"OVAL":[0, 1, 0], "ELLIPSE":[0, 0, 1], "POLYGON": [0, 0, 0]}
+    padCompressed = [None]*4 
+    print("here")
+    padCompressed[0] = [pad['x'],pad['y']]
+    padCompressed[1] = [pad['width'], pad['height']]
+    padCompressed[2] = pad['layer']
+    padCompressed[3] = pad['net']
+    # padCompressed[4] = padTypes[pad["type"]]
+    # padCompressed[5] = pad['rot']
 
     return padCompressed
 
@@ -61,5 +68,4 @@ def compressRouteData(route):
         lastPoint = point
 
     return routeList
-
 
