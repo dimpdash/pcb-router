@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+import numpy as np
 
 Model = keras.models.Model
 Input = keras.layers.Input
@@ -134,11 +135,11 @@ class DataGenerator(keras.utils.Sequence):
 
         return inputData, y
 
-    def elements(pcb, key):
+    def elements(self, pcb, key):
         return [element[key] for element in pcb]
     
-    def loadData(path):
-        data = seqGetDataFromFile(path)
+    def loadData(self, id):
+        data = np.load(id)
 
         encoder_input_data_pos= []
         encoder_input_data_size= []
@@ -147,7 +148,9 @@ class DataGenerator(keras.utils.Sequence):
 
         #Fill arrays
         for pcb in data:
-            encoder_input_data_pos.append(elements(pcb,'pos'))
-            encoder_input_data_size.append(elements(pcb,'size'))
-            encoder_input_data_layer.append(elements(pcb,'layer'))
-            encoder_input_data_net.append(elements(pcb,'net'))
+            encoder_input_data_pos.append(self.elements(pcb,'pos'))
+            encoder_input_data_size.append(self.elements(pcb,'size'))
+            encoder_input_data_layer.append(self.elements(pcb,'layer'))
+            encoder_input_data_net.append(self.elements(pcb,'net'))
+        
+        return encoder_input_data_pos, encoder_input_data_size, encoder_input_data_layer, encoder_input_data_net

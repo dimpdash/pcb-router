@@ -11,4 +11,4 @@ for i in range(0, 10 + 1):
         pcbsJSON[pcb["result"]["uuid"]] = convertPCBcompressedToJSON(pcb)
         ids.append(pcb["result"]["uuid"])
     saveDataToFile("./pcb files json/pcb files json " + str(i) + ".data", pcbsJSON)
-saveDataToFile("./pcb files json/ids.data")
+saveDataToFile("./pcb files json/ids.data",ids)

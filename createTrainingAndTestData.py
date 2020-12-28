@@ -65,6 +65,3 @@ def compressRouteData(route):
         lastPoint = point
 
     return routeList
-
-def getId(pcb):
-    

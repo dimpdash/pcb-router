@@ -1,22 +1,16 @@
-from scraperTools import seqSaveDataToFile, getDataFromFile, deleteOldFile
-from createTrainingAndTestData import extractPads, extractRouteElements, getId
-import random
+from scraperTools import getDataFromFile, saveDataToFileInd
+from createTrainingAndTestData import extractPads, extractRouteElements
+import numpy as np
 
-trainInputPath = "./model data/trainPads.data"
-trainOutputPath = "./model data/trainRouting.data"
-
-# Delete previous files test and train input output files
-deleteOldFile(trainInputPath) #TODO
-deleteOldFile(trainOutputPath)
+trainInputPath = "./model data/pads/"
+trainOutputPath = "./model data/routes/"
+fileType = ".npy"
 
 for i in range(0, 10 + 1):
     print(i)
     pcbs = getDataFromFile("./pcb files json/pcb files json " + str(i) + ".data")
    
-    for pcb in pcbs:
-        trainInput = extractPads(pcb)
-        trainOutput = extractRouteElements(pcb)
-        id = getId(pcb)
-        seqSaveDataToFile(trainInputPath, trainInput)
-        seqSaveDataToFile(trainOutputPath, trainOutput) 
-
+    for id in pcbs:
+        pcb = pcbs[id]
+        np.save(trainInputPath + str(id), extractPads(pcb))
+        np.save(trainOutputPath + str(id), extractRouteElements(pcb))

@@ -5,6 +5,8 @@ import json
 import pickle
 import sys
 import os
+import numpy as np
+
 def getProjectLinksOffpage(page):
 
     URL = 'https://oshwlab.com/explore?projectSort=updatedTime&page=' + str(page)
@@ -71,11 +73,6 @@ def getPCB_data(text):
             return jsonData
     return None
 
-def chunks(lst, n):
-    """Yield successive n-sized chunks from lst."""
-    for i in range(0, len(lst), n):
-        yield lst[i:i + n]
-
 
 def getDataFromFile(path):
     with open(path, 'rb') as fileHandle:
@@ -116,3 +113,8 @@ def deleteOldFile(path):
         os.remove(path)
     except FileNotFoundError:
         print("File not found")
+
+def saveDataToFileInd(path, data):
+    with open(path, "wb") as f:
+        np.save(f, data)
+    
