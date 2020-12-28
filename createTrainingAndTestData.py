@@ -13,9 +13,7 @@ maxLayers = 32 + 2
 def extractPads(shapes):
     padsList = []
     for shape in shapes:
-        print(shape)
         if "PAD" in shape:
-            print('hers shap')
             padsList.append(compressPadData(shape["PAD"]))
         elif "LIB" in shape:
             padsList = padsList + extractPads(shape["LIB"])
@@ -25,12 +23,11 @@ def extractPads(shapes):
 def compressPadData(pad):
     
     # padTypes = {"RECT": [1, 0, 0],"OVAL":[0, 1, 0], "ELLIPSE":[0, 0, 1], "POLYGON": [0, 0, 0]}
-    padCompressed = [None]*4 
-    print("here")
-    padCompressed[0] = [pad['x'],pad['y']]
-    padCompressed[1] = [pad['width'], pad['height']]
-    padCompressed[2] = pad['layer']
-    padCompressed[3] = pad['net']
+    padCompressed = dict() 
+    padCompressed["pos"] = [pad['x'],pad['y']]
+    padCompressed["size"] = [pad['width'], pad['height']]
+    padCompressed["layer"] = pad['layer']
+    padCompressed["net"] = pad['net']
     # padCompressed[4] = padTypes[pad["type"]]
     # padCompressed[5] = pad['rot']
 
@@ -69,3 +66,5 @@ def compressRouteData(route):
 
     return routeList
 
+def getId(pcb):
+    
