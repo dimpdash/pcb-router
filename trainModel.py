@@ -1,14 +1,10 @@
 # import tensorflow as tf
-from scraperTools import seqGetDataFromFile
+from pad_autoencoder import autoencoder, DataGenerator
+from scraperTools import getDataFromFile
 
+ids = getDataFromFile("./model data/ids.data")
 
-# arrayType = tf.constant
-
-
-
-#Data properties
-num_layers = 3 #1, 2, 11 no 4 layer boards
-
+dataGen = DataGenerator(ids)
 #Pad data
 
 

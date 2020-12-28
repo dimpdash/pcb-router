@@ -12,12 +12,16 @@ Embedding = keras.layers.Embedding
 Concatenate = keras.layers.Concatenate
 Reshape = keras.layers.Reshape
 Masking = keras.layers.Masking
+pad_sequences = keras.preprocessing.sequence.pad_sequences
+TextVectorization = keras.layers.experimental.preprocessing.TextVectorization
+Sequence = keras.utils.Sequence
 
 #Params
 latent_dim = 10
 num_net_embedded_dim = 10
 num_net_tokens = 100 #TODO find max number of net names in dataset
-num_layers = 32
+max_net_len = 10 #TODO find max len of nets
+num_layers = 3
 num_pos_tokens = 2
 num_size_tokens = 2
 
@@ -26,25 +30,22 @@ num_decoder_tokens = num_net_embedded_dim + num_layers + num_pos_tokens + num_si
 max_num_vias = None
 
 def inputModel(inputLabel):
-    layer_input = Input(shape=(max_num_vias,num_layers, ), name='layer-num-' + inputLabel) #Passed in as one hot 
-    net_input = Input(shape=(max_num_vias, ), name='net-name-' + inputLabel)
-    pos_input = Input(shape=(max_num_vias, num_pos_tokens, ), name='pos-' + inputLabel)
-    size_input = Input(shape=(max_num_vias, num_size_tokens, ), name='size-' + inputLabel)
+    layer_input = Input(shape=(None, num_layers, ), name='layer-num-' + inputLabel) #Passed in as one hot 
+    net_input = Input(shape=(1, ), name='net-name-' + inputLabel, dtype=tf.string)
+    pos_input = Input(shape=(None, num_pos_tokens, ), name='pos-' + inputLabel)
+    size_input = Input(shape=(None, num_size_tokens, ), name='size-' + inputLabel)
 
-    # layer_input = Masking(input_shape=(None,num_layers, ), name='layer-num-' + inputLabel) #Passed in as one hot 
-    # net_input = Input(shape=(None, ), name='net-name-' + inputLabel)
-    # pos_input = Masking(input_shape=(None, num_pos_tokens, ), name='pos-' + inputLabel)
-    # size_input = Masking(input_shape=(None, num_size_tokens, ), name='size-' + inputLabel)
-
-    layer_input_masked = Masking()(layer_input)
-    pos_input_masked = Masking()(pos_input) 
-    size_input_masked = Masking()(size_input)
+    # layer_input_masked = Masking()(layer_input)
+    # pos_input_masked = Masking()(pos_input) 
+    # size_input_masked = Masking()(size_input)
     
-    net_embedded = Embedding(num_net_tokens,num_net_embedded_dim, mask_zero=True)(net_input)
-    print([layer_input_masked, size_input, pos_input, net_embedded])
-    conc = Concatenate(name=inputLabel + "-inputs")([layer_input_masked, size_input_masked, pos_input_masked, net_embedded])
-    # conc = Concatenate(name=inputLabel + "-inputs")([layer_input, size_input, pos_input, net_embedded])   
+    net_vectorized = TextVectorization(output_mode='int')(net_input)
+    net_embedded = Embedding(num_net_tokens,num_net_embedded_dim)(net_vectorized)
+    
+    # conc = Concatenate(name=inputLabel + "-inputs")([layer_input_masked, size_input_masked, pos_input_masked, net_embedded])
+    conc = Concatenate(name=inputLabel + "-inputs")([layer_input, size_input, pos_input, net_embedded])   
 
+    # conc_masked = Masking()(conc)
     return [layer_input, size_input, pos_input,net_input], conc
 
 def autoencoder(inputs):
@@ -61,21 +62,34 @@ def autoencoder(inputs):
     pad_decoder_outputs = Dense(num_decoder_tokens, activation='softmax')(pad_decoder_outputs)
     return pad_decoder_outputs
 
+def padAutoencoder():
+    encoder_input_list, encoder_input_conc = inputModel("encoder")
+    decoder_input_list, decoder_input_conc = inputModel("decoder")
 
-class DataGenerator(keras.utils.Sequence):
+    pad_out = autoencoder([encoder_input_conc, decoder_input_conc])
+    return Model(encoder_input_list + decoder_input_list, pad_out)
+
+def addStartAndEndTags(lstlst, start, end):
+    return [np.concatenate(([lst], lst, [end]), axis=None) for lst in lstlst]
+
+def addEndTag(lstlst, end):
+    return [np.concatenate((lst,[end]), axis=None) for lst in lstlst]
+
+class DataGenerator(Sequence):
     'Generates data for Keras'
-    def __init__(self, list_IDs, labels, batch_size=32, dim=(32,32,32), n_channels=1,
-                 n_classes=10, shuffle=True, path="./model data/trainPads.data"):
+    def __init__(self, list_IDs, batch_size=32, dim=(32,32,32), n_channels=1,
+                 n_classes=10, shuffle=True, folderPath="./model data/pads/"):
         'Initialization'
         self.dim = dim
         self.batch_size = batch_size
-        self.labels = labels
         self.list_IDs = list_IDs
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.shuffle = shuffle
         self.on_epoch_end()
-        self.data = loadData(path)
+        self.folderPath = folderPath
+        self.data = self.loadAllData()
+    
 
     def __len__(self):
         'Denotes the number of batches per epoch'
@@ -90,67 +104,96 @@ class DataGenerator(keras.utils.Sequence):
         list_IDs_temp = [self.list_IDs[k] for k in indexes]
 
         # Generate data
-        X, y = self.__data_generation(list_IDs_temp)
+        X, y = self.data_generation(list_IDs_temp)
 
         return X, y
 
     def on_epoch_end(self):
         'Updates indexes after each epoch'
         self.indexes = np.arange(len(self.list_IDs))
-        if self.shuffle == True:
+        if self.shuffle:
             np.random.shuffle(self.indexes)
+            
 
-    def __data_generation(self, list_IDs_temp):
+    def data_generation(self, list_IDs_temp):
         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)      
         
         # Initialization
-        encoder_input_data_pos= []
-        encoder_input_data_size= []
-        encoder_input_data_layer= []
-        encoder_input_data_net= []
 
-        # Generate data
-        for i, ID in enumerate(list_IDs_temp):
-            # Store sample
-            X[i,] = self.data['id']
+        pcbs = {}
+        for _, id in enumerate(list_IDs_temp):
+            pcbs[id] = self.loadData(id)
 
-            # Store class
-            y[i] = self.data['id']
+        # batchSize = len(pcbs)
 
+        # pos = np.zeros(batchSize)
+        # size = np.zeros(batchSize)
+        # layer = np.zeros(batchSize)
+        # net = np.zeros(batchSize)
+
+        # Store sample
+        pos = [pcbs[key]["pos"] for key in pcbs]
+        size = [pcbs[key]["size"] for key in pcbs]
+        layer = [pcbs[key]["layer"] for key in pcbs]
+        net = [pcbs[key]["net"] for key in pcbs]
         #Pad data
+        layer = pad_sequences(layer, padding='post')
+        size = pad_sequences(size, padding='post')
+        net = pad_sequences(net, dtype=object, value='', padding='post') # '' is the padding token for the textVectorization layer
+        pos = pad_sequences(pos, padding='post')
+        
+        netNew = [np.array(' '.join(netList)) for netList in net]
 
+        # layer = np.array(layer)
+        # size = np.array(size)
+        # net = np.array(net)
+        # pos = np.array(pos)
 
+        netNameDecoderInput = [np.array( 'SOF ' + ' '.join(netList) + ' EOF') for netList in net]
+        netNameDecoderOutput = [np.array( 'SOF ' + ' '.join(netList) + ' EOF') for netList in net]
 
-        inputData = {
-            "layer-num-encoder": encoder_input_data_layer,
-            "net-name-encoder": encoder_input_data_net,
-            "pos-encoder": encoder_input_data_pos,
-            "size-encoder": encoder_input_data_size,
+        X = {
+            "layer-num-encoder": layer,
+            "net-name-encoder": netNew,
+            "pos-encoder": pos,
+            "size-encoder": size,
 
-            "layer-num-decoder": encoder_input_data_layer,
-            "net-name-decoder": encoder_input_data_net,
-            "pos-decoder": encoder_input_data_pos,
-            "size-decoder": encoder_input_data_size
+            "layer-num-decoder": addStartAndEndTags(layer,-1,-2),
+            "net-name-decoder":  netNameDecoderInput, #addStartAndEndTags(net,'SOF', 'EOF'), #TODO check SOF and EOF aren't used
+            "pos-decoder": addStartAndEndTags(pos,-1,-2),
+            "size-decoder": addStartAndEndTags(size,-1,-2)
         }
 
-        return inputData, y
+        y = {  
+             addEndTag(layer,-2),
+                netNameDecoderOutput, #addEndTag(net, 'EOF'), #TODO check SOF and EOF aren't used
+            "pos-decoder": addEndTag(pos,-2),
+            "size-decoder": addEndTag(size,-2)
+        }
+
+        return X, y
 
     def elements(self, pcb, key):
         return [element[key] for element in pcb]
     
     def loadData(self, id):
-        data = np.load(id)
+        pcb = np.load(self.folderPath + id + ".npy", allow_pickle=True)
 
-        encoder_input_data_pos= []
-        encoder_input_data_size= []
-        encoder_input_data_layer= []
-        encoder_input_data_net= []
+        pos= []
+        size= []
+        layer= []
+        net= []
 
         #Fill arrays
-        for pcb in data:
-            encoder_input_data_pos.append(self.elements(pcb,'pos'))
-            encoder_input_data_size.append(self.elements(pcb,'size'))
-            encoder_input_data_layer.append(self.elements(pcb,'layer'))
-            encoder_input_data_net.append(self.elements(pcb,'net'))
+        pos = self.elements(pcb,'pos')
+        size = self.elements(pcb,'size')
+        layer = self.elements(pcb,'layer')
+        net = self.elements(pcb,'net')
         
-        return encoder_input_data_pos, encoder_input_data_size, encoder_input_data_layer, encoder_input_data_net
+        return {"pos": pos, "size": size, "layer": layer, "net": net}
+    
+    def loadAllData(self):
+        data = {}
+        for id in self.list_IDs:
+            data[id] = self.loadData(id)
+        return data
