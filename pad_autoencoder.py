@@ -1,8 +1,17 @@
+from weakref import WeakKeyDictionary
 import numpy as np
+from numpy.core.defchararray import array
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 import numpy as np
+from hilbertcurve.hilbertcurve import HilbertCurve
+from tensorflow.python.keras.backend import concatenate
+from tensorflow.python.keras.layers import embeddings
+from tensorflow.python.keras.layers.preprocessing.category_encoding import _NUM_ELEMENTS_NAME
+
+p = 100
+hilbert_curve = HilbertCurve(p, 2)
 
 Model = keras.models.Model
 Input = keras.layers.Input
@@ -18,7 +27,8 @@ Sequence = keras.utils.Sequence
 Tokenizer = keras.preprocessing.text.Tokenizer
 
 #Params
-latent_dim = 128
+latent_dim = 60
+num_input_nets_dim = 300 # cannot include all nets as embedding layer can only handle 1000
 num_net_embedded_dim = 10
 num_net_tokens = 100 #TODO find max number of net names in dataset
 max_net_len = 10 #TODO find max len of nets
@@ -26,16 +36,28 @@ num_layers = 2
 num_pos_tokens = 2
 num_size_tokens = 2
 num_EOF_tokens = 2
-num_net_tokens = 1
+num_net_tokens = 0
 
 num_decoder_tokens = num_layers + num_net_tokens + num_pos_tokens + num_size_tokens + num_EOF_tokens
 
 max_num_vias = None
 
+encoder_input_name = 'encoder-input'
+decoder_input_name = 'decoder-input'
+encoder_input_net_name = 'encoder-input-net'
+decoder_input_net_name = 'decoder-input-net'
+encoder_input_mask_name = 'encoder-input-mask'
+decoder_input_mask_name = 'decoder-input-mask'
+
 def simpleInputs():
-    encoder_input = Input(shape=(None,num_decoder_tokens,), name="encoder-input")
-    decoder_input = Input(shape=(None,num_decoder_tokens,), name="decoder-input")
-    return encoder_input, decoder_input
+    encoder_input = Input(shape=(None,num_decoder_tokens,), name=encoder_input_name)
+    decoder_input = Input(shape=(None,num_decoder_tokens,), name=decoder_input_name)
+    encoder_input_net = Input(shape=(None,), name=encoder_input_net_name)
+    decoder_input_net = Input(shape=(None,), name=decoder_input_net_name)
+    
+    encoder_input_mask = Input(shape=(None,), name=encoder_input_mask_name, dtype=bool)
+    decoder_input_mask = Input(shape=(None,), name=decoder_input_mask_name, dtype=bool)
+    return encoder_input, decoder_input, encoder_input_net, decoder_input_net
 
 def inputModel(inputLabel):
     layer_input = Input(shape=(None, num_layers, ), name='layer-num-' + inputLabel) #Passed in as one hot 
@@ -56,17 +78,32 @@ def inputModel(inputLabel):
     return [layer_input, size_input, pos_input,net_input], conc
 
 def autoencoder(inputs):
+    net_embedding = Embedding(2000,num_net_embedded_dim,mask_zero=True)
+    net_embedding_decoder = Embedding(1,num_net_embedded_dim,mask_zero=True)
+
     #Encoder
-    pad_encoder_input = inputs[0]
+    numeric_encoder_input = inputs[0]
+    pad_encoder_input_net = inputs[2]
+
+    encoder_net_embedded = net_embedding(pad_encoder_input_net)
+    pad_encoder_input = Concatenate(axis=-1)([encoder_net_embedded, numeric_encoder_input])
+    pad_encoder_input._keras_mask = encoder_net_embedded._keras_mask
+
     pad_encoder = LSTM(latent_dim, return_state=True, name="pad-encoder")
     pad_encoder_outputs, state_h, state_c = pad_encoder(pad_encoder_input)
     pad_encoder_states = [state_h, state_c]
     
     #Decoder
-    pad_decoder_input = inputs[1]
+    numeric_decoder_input = inputs[1]
+    pad_decoder_input_net = inputs[3]
+
+    decoder_net_embedded = net_embedding_decoder(pad_decoder_input_net)
+    pad_decoder_input = Concatenate(axis=-1)([numeric_decoder_input,decoder_net_embedded])
+    pad_decoder_input._keras_mask = decoder_net_embedded._keras_mask
+
     pad_decoder = LSTM(latent_dim, return_sequences=True, return_state=True, name="pad-decoder")
     pad_decoder_outputs, _, _ = pad_decoder(pad_decoder_input, initial_state=pad_encoder_states)
-    pad_decoder_outputs = Dense(num_decoder_tokens, activation='softmax')(pad_decoder_outputs)
+    pad_decoder_outputs = Dense(num_decoder_tokens, activation='relu')(pad_decoder_outputs)
     return pad_decoder_outputs
 
 def padAutoencoder():
@@ -119,6 +156,12 @@ def addStartAndEndRows(batch):
         batchExtend.append(pcb)
     return batchExtend
 
+def renameUncommonNets(net, commonNets):
+    if net not in commonNets:
+        return 'Uncommon'
+    else:
+        return net
+
 def addEmptyStringName(name):
     if name == '':
         return 'Unnamed'
@@ -139,12 +182,13 @@ def standardize(x, mean, std):
 
 class DataGenerator(Sequence):
     'Generates data for Keras'
-    def __init__(self, list_IDs, batch_size=32, dim=(32,32,32), n_channels=1,
+    def __init__(self, list_IDs, all_IDs, batch_size=32, dim=(32,32,32), n_channels=1,
                  n_classes=10, shuffle=True, folderPath="./model data/pads/", tokenizer=Tokenizer(filters='')):
         'Initialization'
         self.dim = dim
         self.batch_size = batch_size
         self.list_IDs = list_IDs
+        self.all_IDs = all_IDs
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.shuffle = shuffle
@@ -152,7 +196,37 @@ class DataGenerator(Sequence):
         self.folderPath = folderPath
         self.data = self.loadAllData()
         self.net_tokenizer = tokenizer
+        self.preprocessMostCommonNetNames()
         self.preprocessDataStats()
+        self.posxi = 4
+        self.posyi = 5
+        self.minPos = min(self.posxStats.min, self.posyStats.min)
+
+    def preprocessMostCommonNetNames(self):
+        self.commonNetNames = []
+        netOcc = dict()
+
+        for id in self.all_IDs:
+            data = self.loadData(id)
+            nets = np.transpose(data["net"])
+            for net in nets: 
+                if net not in netOcc:
+                    netOcc[net] = 1
+                else:
+                    netOcc[net] += 1
+
+        
+        maxNetOccCounts = [0]*(num_input_nets_dim-1)
+        maxNetOccs = ['']*(num_input_nets_dim-1)
+        for net in netOcc:
+            minOcc = min(maxNetOccCounts)
+            minIndex = maxNetOccCounts.index(minOcc)
+            if minOcc < netOcc[net]:
+                maxNetOccCounts[minIndex] = netOcc[net]
+                maxNetOccs[minIndex] = net
+                
+
+        self.commonNetNames = maxNetOccs
 
     def preprocessDataStats(self):
         self.posxStats = Stats()
@@ -160,7 +234,7 @@ class DataGenerator(Sequence):
         self.sizexStats = Stats()
         self.sizeyStats = Stats()
 
-        for id in self.list_IDs:
+        for id in self.all_IDs:
             data = self.loadData(id)
             pos = np.transpose(data["pos"]) 
             size = np.transpose(data["size"])
@@ -202,24 +276,22 @@ class DataGenerator(Sequence):
         for _, id in enumerate(list_IDs_temp):
             pcbs[id] = self.loadData(id)
 
-        # batchSize = len(pcbs)
-
-        # pos = np.zeros(batchSize)
-        # size = np.zeros(batchSize)
-        # layer = np.zeros(batchSize)
-        # net = np.zeros(batchSize)
-
-        encoderInput = []
-        decoderInput = []
-        y = []
-        
+        #find max number of pads in batch
         max_pads = 0
         for key in pcbs:
             if max_pads < len(pcbs[key]["pos"]):
                 max_pads = len(pcbs[key]["pos"])
 
+        encoderInput = []
+        decoderInput = []
+        encoderInputNet = []
+        decoderInputNet = []
+        y = []
+        encoderInputMask = np.zeros((self.batch_size, max_pads), dtype=bool)
+        decoderInputMask = np.zeros((self.batch_size, max_pads), dtype=bool)
+
         # Store sample
-        for key in pcbs:
+        for i, key in enumerate(pcbs):
             pos = np.transpose(pcbs[key]["pos"]) 
             size = np.transpose(pcbs[key]["size"])
             posx = normalizeAndStandardize(pos[0], self.posxStats)
@@ -229,11 +301,12 @@ class DataGenerator(Sequence):
 
             layerCategorical = pcbs[key]["layer"]
             layer = np.zeros((len(layerCategorical), 2))
-            for i, x in enumerate(layerCategorical):
+            for j, x in enumerate(layerCategorical):
                 if x == 0 or x == 1:
-                    layer[i][x] = 1 
+                    layer[j][x] = 1 
             
             netNames = pcbs[key]["net"]
+            netNames = list(map(renameUncommonNets, netNames, self.commonNetNames))
             netNames = list(map(addEmptyStringName, netNames))
             self.net_tokenizer.fit_on_texts(netNames)
             net = self.net_tokenizer.texts_to_sequences(netNames)
@@ -241,21 +314,30 @@ class DataGenerator(Sequence):
 
             sof = np.zeros(len(layer))
             eof = sof
-            pcbFormatted = np.dstack((sof, eof, layer[:,0], layer[:,1], posx, posy, sizex, sizey, net))[0]
+            pcbFormatted = np.dstack((sof, eof, layer[:,0], layer[:,1], posx, posy, sizex, sizey))[0]
+            pcbFormatted = self.orderPoints(pcbFormatted, np.transpose(pos))
             startTag = np.zeros((1,pcbFormatted.shape[1]))
             startTag[0][0] = 1
             endTag = np.zeros((1,pcbFormatted.shape[1]))
             endTag[0][1] = 1
             padding = np.zeros((max_pads-pcbFormatted.shape[0], pcbFormatted.shape[1]))
+            paddingNet = np.zeros(max_pads-pcbFormatted.shape[0])
 
             encoderInput.append(np.concatenate((startTag, pcbFormatted, endTag, padding), axis=0))
             decoderInput.append(np.concatenate((startTag, pcbFormatted, padding)))
             y.append(np.concatenate((pcbFormatted, endTag, padding)))
+            encoderInputNet.append(np.concatenate(([1],net,[1],paddingNet)))
+            decoderInputNet.append(np.concatenate(([1],net,paddingNet)))
+            # encoderInputMask[i][:pcbFormatted.shape[0] + 2] = True # add 2 for end and start tage
+            # decoderInputMask[i][:pcbFormatted.shape[0]  + 1] = True # add one for start tag
+            
 
         arrayType = np.array
         encoderInput = arrayType(encoderInput, dtype=np.float64)
         decoderInput = arrayType(decoderInput,  dtype=np.float64)
         y = arrayType(y,  dtype=np.float64)
+        encoderInputNet = arrayType(encoderInputNet)
+        decoderInputNet = arrayType(decoderInputNet)
 
         # layer = np.array([pcbs[key]["layer"] for key in pcbs])
         # net = np.array([pcbs[key]["net"] for key in pcbs])
@@ -268,13 +350,17 @@ class DataGenerator(Sequence):
         # pos1 = pad_sequences(pos1, padding='post')
         # pos2 = pad_sequences(pos2, padding='post')
         
-        X = {"encoder-input": encoderInput,
-            "decoder-input": decoderInput
+        X = {encoder_input_name: encoderInput,
+            decoder_input_name: decoderInput,
+            encoder_input_net_name: encoderInputNet,
+            decoder_input_net_name: decoderInputNet
         }
         # print('X')
         # print(X)
         # print('Y')
         # print(y)
+        self.X = X
+        self.y = y
         return X, y
 
     def elements(self, pcb, key):
@@ -300,6 +386,12 @@ class DataGenerator(Sequence):
         for id in self.list_IDs:
             data[id] = self.loadData(id)
         return data
+    def orderPoints(self, pcb, points):
+        distances = np.array(hilbert_curve.distances_from_points(((points + abs(self.minPos))*100).astype('int')))
+        inds = distances.argsort()
+        t = pcb[inds]
+        return t
+
 
 class Stats():
     def __init__(self):
@@ -330,5 +422,6 @@ class Stats():
         self.n = 0
         self.min = np.inf
         self.max = 0
+
 
 

@@ -27,20 +27,21 @@ random.shuffle(ids)
 batchSize = 32
 validation_split = 0.1
 cutoffIndex = int(len(ids)*validation_split)
-opt = keras.optimizers.Adam(learning_rate=0.0001, clipvalue=1)
+opt = keras.optimizers.Adam(learning_rate=0.001, clipvalue=0.5)
 
-encoder_input, decoder_input = simpleInputs()
+inputs = simpleInputs()
 
-pad_out = autoencoder([encoder_input, decoder_input])
-model = Model([encoder_input, decoder_input], pad_out)
+pad_out = autoencoder(inputs)
+model = Model(inputs, pad_out)
 
 tokenizer = Tokenizer(filters='')
 
 trainIds = ids[cutoffIndex:]
 valIds = ids[:cutoffIndex]
-trainData = DataGenerator(trainIds, batch_size = batchSize, tokenizer=tokenizer)
-valData = DataGenerator(valIds, batch_size = batchSize, tokenizer=tokenizer)
+trainData = DataGenerator(trainIds, ids, batch_size = batchSize, tokenizer=tokenizer)
+valData = DataGenerator(valIds, ids, batch_size = batchSize, tokenizer=tokenizer)
 
+keras.utils.plot_model(model, "model.png", show_shapes=True)
 model.compile(optimizer=opt, loss='mse', run_eagerly=True)
 model.fit(x=trainData, validation_data = valData, epochs = 100)
 model.save('model')
