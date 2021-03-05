@@ -1,4 +1,4 @@
-from pad_autoencoder import DataGenerator, autoencoder, inputModel, simpleInputs
+from pad_autoencoder import DataGenerator, autoencoder, inputModel, simpleInputs, addWordsToTokenizer
 import numpy as np
 from tensorflow import keras
 from scraperTools import getDataFromFile
@@ -35,6 +35,7 @@ pad_out = autoencoder(inputs)
 model = Model(inputs, pad_out)
 
 tokenizer = Tokenizer(filters='')
+addWordsToTokenizer(tokenizer, ids)
 
 trainIds = ids[cutoffIndex:]
 valIds = ids[:cutoffIndex]
