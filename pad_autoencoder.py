@@ -28,7 +28,7 @@ Tokenizer = keras.preprocessing.text.Tokenizer
 
 #Params
 latent_dim = 60
-num_input_nets_dim = 300 # cannot include all nets as embedding layer can only handle 1000
+num_input_nets_dim = 64 # cannot include all nets as embedding layer can only handle 1000
 num_net_embedded_dim = 10
 num_net_tokens = 100 #TODO find max number of net names in dataset
 max_net_len = 10 #TODO find max len of nets
@@ -39,6 +39,8 @@ num_EOF_tokens = 2
 num_net_tokens = 0
 
 num_decoder_tokens = num_layers + num_net_tokens + num_pos_tokens + num_size_tokens + num_EOF_tokens
+num_encoder_tokens = num_layers + num_net_tokens + num_pos_tokens + num_size_tokens + num_EOF_tokens
+num_output_tokens = num_layers + num_net_tokens + num_pos_tokens + num_size_tokens + num_EOF_tokens
 
 max_num_vias = None
 
@@ -69,7 +71,7 @@ def inputModel(inputLabel):
     # pos_input_masked = Masking()(pos_input) 
     # size_input_masked = Masking()(size_input)
     
-    net_embedded = Embedding(num_net_tokens,num_net_embedded_dim)(net_vectorized)
+    net_embedded = Embedding(100,num_net_embedded_dim)(net_vectorized)
     
     # conc = Concatenate(name=inputLabel + "-inputs")([layer_input_masked, size_input_masked, pos_input_masked, net_embedded])
     conc = Concatenate(name=inputLabel + "-inputs")([layer_input, size_input, pos_input, net_embedded])   
@@ -78,8 +80,8 @@ def inputModel(inputLabel):
     return [layer_input, size_input, pos_input,net_input], conc
 
 def autoencoder(inputs):
-    net_embedding = Embedding(2000,num_net_embedded_dim,mask_zero=True)
-    net_embedding_decoder = Embedding(1,num_net_embedded_dim,mask_zero=True)
+    net_embedding = Embedding(num_input_nets_dim + 1, num_net_embedded_dim,mask_zero=True)
+    net_embedding_decoder = Embedding(num_input_nets_dim + 1, num_net_embedded_dim,mask_zero=True)
 
     #Encoder
     numeric_encoder_input = inputs[0]
@@ -128,6 +130,70 @@ def padAutoencoder():
 #         batchExtend[i][-1, 0] = 1
 #     return batchExtend
 
+class MyTokenizer():
+    # Tokenizer class that has net names beyond the word limit set as index 1 rather than index 0. leaving index 0 for masking
+    def __init__(self, filters='', num_words=None):
+        self.tokenizer = Tokenizer(filters=filters, num_words=num_words)
+        self.uncommon_name = 'UNCOMMON'
+        self.tokenizer.fit_on_texts([self.uncommon_name]) # reserve index 1 as uncommon name leaving 0 as a mask
+
+    def texts_to_sequences(self, texts):
+        # replaces empty strings with uncommon tag name which was fit on texts immediately so will be embedding 1
+        self.tokenizer.texts_to_sequences(texts.replace('',self.uncommon_name))
+    def fit_on_texts(self, texts):
+        self.tokenizer.fit_on_texts(texts)
+
+class loadable():
+    def __init__(self, folderPath="./model data/pads/"):
+         self.folderPath= folderPath
+    
+    def elements(self, pcb, key):
+        return [element[key] for element in pcb]
+
+    def loadData(self, sid):
+        pcb = np.load(sellf.folderPath + id + ".npy", allow_pickle=True)
+        pos= []
+        size= []
+        layer= []
+        net= []
+
+        #Fill arrays
+        pos = self.elements(pcb,'pos')
+        size = self.elements(pcb,'size')
+        layer = self.elements(pcb,'layer')
+        net = self.elements(pcb,'net').replace(' ','_').replace('','Unnamed')
+        
+        return {"pos": pos, "size": size, "layer": layer, "net": net}
+    
+
+    def loadAllData(self):
+        data = {}
+        for id in self.list_IDs:
+            data[id] = self.loadData(id)
+        return data
+
+class DataPipeline(loadable):
+    def __init__(self, ids, batchSize, validation_split):
+        self.ids = ids
+        cutoffIndex = int(len(ids)*validation_split)
+        trainIds = ids[cutoffIndex:]
+        valIds = ids[:cutoffIndex]
+
+        self.tokenizer = MyTokenizer(filter='',num_words=num_input_nets_dim-1)
+        self.addWordsToTokenizer()
+
+        self.trainData = DataGenerator(trainIds, ids, batch_size = batchSize, tokenizer=self.tokenizer)
+        self.valData = DataGenerator(valIds, ids, batch_size = batchSize, tokenizer=self.tokenizer)
+
+    def dataGenerators(self):
+        return self.trainData, self.valData
+
+    def addWordsToTokenizer(self):
+        for id in self.ids:
+            pcb = self.loadData(id)
+            net = pcb["net"]
+            self.tokenizer.fit_on_texts(net)
+
 def addStartAndEndTags(batch):
     start = np.zeros(num_decoder_tokens)
     end = np.zeros(num_decoder_tokens)
@@ -162,12 +228,6 @@ def renameUncommonNets(net, commonNets):
     else:
         return net
 
-def addEmptyStringName(name):
-    if name == '':
-        return 'Unnamed'
-    else:
-        return name.replace(' ', '_')
-
 def normalizeAndStandardize(x, stats):
     x = standardize(x, stats.mean(), stats.std())
     max, min = standardize((stats.max, stats.min), stats.mean(), stats.std()) #rescale mean and std
@@ -180,7 +240,9 @@ def standardize(x, mean, std):
     return (x - mean)/std
 
 
-class DataGenerator(Sequence):
+
+
+class DataGenerator(Sequence, loadable):
     'Generates data for Keras'
     def __init__(self, list_IDs, all_IDs, batch_size=32, dim=(32,32,32), n_channels=1,
                  n_classes=10, shuffle=True, folderPath="./model data/pads/", tokenizer=Tokenizer(filters='')):
@@ -214,10 +276,11 @@ class DataGenerator(Sequence):
                     netOcc[net] = 1
                 else:
                     netOcc[net] += 1
-
+        numCommonNets = num_input_nets_dim-3 # one for uncommon and one for reserving 0 as a mask, not sure about third
+        #TODO find out why need -3 and not -2
         
-        maxNetOccCounts = [0]*(num_input_nets_dim-1)
-        maxNetOccs = ['']*(num_input_nets_dim-1)
+        maxNetOccCounts = [0]*numCommonNets
+        maxNetOccs = ['']*numCommonNets
         for net in netOcc:
             minOcc = min(maxNetOccCounts)
             minIndex = maxNetOccCounts.index(minOcc)
@@ -225,7 +288,6 @@ class DataGenerator(Sequence):
                 maxNetOccCounts[minIndex] = netOcc[net]
                 maxNetOccs[minIndex] = net
                 
-
         self.commonNetNames = maxNetOccs
 
     def preprocessDataStats(self):
@@ -306,9 +368,6 @@ class DataGenerator(Sequence):
                     layer[j][x] = 1 
             
             netNames = pcbs[key]["net"]
-            netNames = list(map(renameUncommonNets, netNames, self.commonNetNames))
-            netNames = list(map(addEmptyStringName, netNames))
-            self.net_tokenizer.fit_on_texts(netNames)
             net = self.net_tokenizer.texts_to_sequences(netNames)
             net = np.array(net).flatten()
 
@@ -321,7 +380,7 @@ class DataGenerator(Sequence):
             endTag = np.zeros((1,pcbFormatted.shape[1]))
             endTag[0][1] = 1
             padding = np.zeros((max_pads-pcbFormatted.shape[0], pcbFormatted.shape[1]))
-            paddingNet = np.zeros(max_pads-pcbFormatted.shape[0])
+            paddingNet = np.zeros(max_pads-net.shape[0])
 
             encoderInput.append(np.concatenate((startTag, pcbFormatted, endTag, padding), axis=0))
             decoderInput.append(np.concatenate((startTag, pcbFormatted, padding)))
@@ -336,8 +395,8 @@ class DataGenerator(Sequence):
         encoderInput = arrayType(encoderInput, dtype=np.float64)
         decoderInput = arrayType(decoderInput,  dtype=np.float64)
         y = arrayType(y,  dtype=np.float64)
-        encoderInputNet = arrayType(encoderInputNet)
-        decoderInputNet = arrayType(decoderInputNet)
+        encoderInputNet = arrayType(encoderInputNet, dtype=np.float64)
+        decoderInputNet = arrayType(decoderInputNet, dtype=np.float64)
 
         # layer = np.array([pcbs[key]["layer"] for key in pcbs])
         # net = np.array([pcbs[key]["net"] for key in pcbs])
@@ -362,30 +421,7 @@ class DataGenerator(Sequence):
         self.X = X
         self.y = y
         return X, y
-
-    def elements(self, pcb, key):
-        return [element[key] for element in pcb]
     
-    def loadData(self, id):
-        pcb = np.load(self.folderPath + id + ".npy", allow_pickle=True)
-        pos= []
-        size= []
-        layer= []
-        net= []
-
-        #Fill arrays
-        pos = self.elements(pcb,'pos')
-        size = self.elements(pcb,'size')
-        layer = self.elements(pcb,'layer')
-        net = self.elements(pcb,'net')
-        
-        return {"pos": pos, "size": size, "layer": layer, "net": net}
-    
-    def loadAllData(self):
-        data = {}
-        for id in self.list_IDs:
-            data[id] = self.loadData(id)
-        return data
     def orderPoints(self, pcb, points):
         distances = np.array(hilbert_curve.distances_from_points(((points + abs(self.minPos))*100).astype('int')))
         inds = distances.argsort()
