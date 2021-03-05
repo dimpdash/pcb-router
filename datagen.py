@@ -1,4 +1,4 @@
-from pad_autoencoder import DataGenerator, autoencoder, inputModel, simpleInputs, addWordsToTokenizer
+from pad_autoencoder import DataPipeline, autoencoder, inputModel, simpleInputs
 import numpy as np
 from tensorflow import keras
 from scraperTools import getDataFromFile
@@ -26,6 +26,7 @@ random.shuffle(ids)
 
 batchSize = 32
 validation_split = 0.1
+folderPath = "./model data/pads/"
 cutoffIndex = int(len(ids)*validation_split)
 opt = keras.optimizers.Adam(learning_rate=0.001, clipvalue=0.5)
 
@@ -33,14 +34,10 @@ inputs = simpleInputs()
 
 pad_out = autoencoder(inputs)
 model = Model(inputs, pad_out)
+dataPipeline = DataPipeline(ids, folderPath, batchSize=batchSize, validation_split=validation_split)
+trainData, valData = dataPipeline.dataGenerators()
 
-tokenizer = Tokenizer(filters='')
-addWordsToTokenizer(tokenizer, ids)
 
-trainIds = ids[cutoffIndex:]
-valIds = ids[:cutoffIndex]
-trainData = DataGenerator(trainIds, ids, batch_size = batchSize, tokenizer=tokenizer)
-valData = DataGenerator(valIds, ids, batch_size = batchSize, tokenizer=tokenizer)
 
 keras.utils.plot_model(model, "model.png", show_shapes=True)
 model.compile(optimizer=opt, loss='mse', run_eagerly=True)

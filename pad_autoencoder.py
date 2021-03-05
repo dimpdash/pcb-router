@@ -130,6 +130,9 @@ def padAutoencoder():
 #         batchExtend[i][-1, 0] = 1
 #     return batchExtend
 
+def replaceTexts(net):
+    return net.replace(' ','_').replace('','Unnamed')
+
 class MyTokenizer():
     # Tokenizer class that has net names beyond the word limit set as index 1 rather than index 0. leaving index 0 for masking
     def __init__(self, filters='', num_words=None):
@@ -139,19 +142,20 @@ class MyTokenizer():
 
     def texts_to_sequences(self, texts):
         # replaces empty strings with uncommon tag name which was fit on texts immediately so will be embedding 1
-        self.tokenizer.texts_to_sequences(texts.replace('',self.uncommon_name))
+        newTexts = list(map(lambda text : text.replace('',self.uncommon_name), texts))
+        self.tokenizer.texts_to_sequences(newTexts)
     def fit_on_texts(self, texts):
         self.tokenizer.fit_on_texts(texts)
 
 class loadable():
-    def __init__(self, folderPath="./model data/pads/"):
-         self.folderPath= folderPath
+    def __init__(self, folderPath):
+         self.folderPath = folderPath
     
     def elements(self, pcb, key):
         return [element[key] for element in pcb]
 
-    def loadData(self, sid):
-        pcb = np.load(sellf.folderPath + id + ".npy", allow_pickle=True)
+    def loadData(self, id):
+        pcb = np.load(self.folderPath + id + ".npy", allow_pickle=True)
         pos= []
         size= []
         layer= []
@@ -161,7 +165,8 @@ class loadable():
         pos = self.elements(pcb,'pos')
         size = self.elements(pcb,'size')
         layer = self.elements(pcb,'layer')
-        net = self.elements(pcb,'net').replace(' ','_').replace('','Unnamed')
+        net = self.elements(pcb,'net')
+        net = list(map(replaceTexts, net)) 
         
         return {"pos": pos, "size": size, "layer": layer, "net": net}
     
@@ -173,17 +178,20 @@ class loadable():
         return data
 
 class DataPipeline(loadable):
-    def __init__(self, ids, batchSize, validation_split):
+    def __init__(self, ids, folderPath, batchSize=32, validation_split=0.1):
+        self.folderPath = folderPath
         self.ids = ids
         cutoffIndex = int(len(ids)*validation_split)
         trainIds = ids[cutoffIndex:]
         valIds = ids[:cutoffIndex]
 
-        self.tokenizer = MyTokenizer(filter='',num_words=num_input_nets_dim-1)
+        self.tokenizer = MyTokenizer(filters='',num_words=num_input_nets_dim-1)
         self.addWordsToTokenizer()
 
-        self.trainData = DataGenerator(trainIds, ids, batch_size = batchSize, tokenizer=self.tokenizer)
-        self.valData = DataGenerator(valIds, ids, batch_size = batchSize, tokenizer=self.tokenizer)
+        self.preprocessDataStats()
+
+        self.trainData = DataGenerator(trainIds, stats=self.stats, batch_size = batchSize, tokenizer=self.tokenizer, folderPath=self.folderPath)
+        self.valData = DataGenerator(valIds, stats=self.stats, batch_size = batchSize, tokenizer=self.tokenizer, folderPath=self.folderPath)
 
     def dataGenerators(self):
         return self.trainData, self.valData
@@ -193,6 +201,23 @@ class DataPipeline(loadable):
             pcb = self.loadData(id)
             net = pcb["net"]
             self.tokenizer.fit_on_texts(net)
+
+    def preprocessDataStats(self):
+        posxStats = Stats()
+        posyStats = Stats()
+        sizexStats = Stats()
+        sizeyStats = Stats()
+
+        for id in self.ids:
+            data = self.loadData(id)
+            pos = np.transpose(data["pos"]) 
+            size = np.transpose(data["size"])
+            posxStats.addDataPoints(pos[0])
+            posyStats.addDataPoints(pos[1])
+            sizexStats.addDataPoints(size[0])
+            sizeyStats.addDataPoints(size[1])
+
+        self.stats = [posxStats, posyStats, sizexStats, sizeyStats]
 
 def addStartAndEndTags(batch):
     start = np.zeros(num_decoder_tokens)
@@ -244,13 +269,12 @@ def standardize(x, mean, std):
 
 class DataGenerator(Sequence, loadable):
     'Generates data for Keras'
-    def __init__(self, list_IDs, all_IDs, batch_size=32, dim=(32,32,32), n_channels=1,
-                 n_classes=10, shuffle=True, folderPath="./model data/pads/", tokenizer=Tokenizer(filters='')):
+    def __init__(self, list_IDs, stats, batch_size=32, dim=(32,32,32), n_channels=1,
+                 n_classes=10, shuffle=True, folderPath="./model data/pads/", tokenizer=MyTokenizer(filters='')):
         'Initialization'
         self.dim = dim
         self.batch_size = batch_size
         self.list_IDs = list_IDs
-        self.all_IDs = all_IDs
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.shuffle = shuffle
@@ -258,52 +282,10 @@ class DataGenerator(Sequence, loadable):
         self.folderPath = folderPath
         self.data = self.loadAllData()
         self.net_tokenizer = tokenizer
-        self.preprocessMostCommonNetNames()
-        self.preprocessDataStats()
+        self.posxStats, self.posyStats, self.sizexStats, self.sizeyStats = stats
+        self.minPos = min(self.posxStats.min, self.posyStats.min)
         self.posxi = 4
         self.posyi = 5
-        self.minPos = min(self.posxStats.min, self.posyStats.min)
-
-    def preprocessMostCommonNetNames(self):
-        self.commonNetNames = []
-        netOcc = dict()
-
-        for id in self.all_IDs:
-            data = self.loadData(id)
-            nets = np.transpose(data["net"])
-            for net in nets: 
-                if net not in netOcc:
-                    netOcc[net] = 1
-                else:
-                    netOcc[net] += 1
-        numCommonNets = num_input_nets_dim-3 # one for uncommon and one for reserving 0 as a mask, not sure about third
-        #TODO find out why need -3 and not -2
-        
-        maxNetOccCounts = [0]*numCommonNets
-        maxNetOccs = ['']*numCommonNets
-        for net in netOcc:
-            minOcc = min(maxNetOccCounts)
-            minIndex = maxNetOccCounts.index(minOcc)
-            if minOcc < netOcc[net]:
-                maxNetOccCounts[minIndex] = netOcc[net]
-                maxNetOccs[minIndex] = net
-                
-        self.commonNetNames = maxNetOccs
-
-    def preprocessDataStats(self):
-        self.posxStats = Stats()
-        self.posyStats = Stats()
-        self.sizexStats = Stats()
-        self.sizeyStats = Stats()
-
-        for id in self.all_IDs:
-            data = self.loadData(id)
-            pos = np.transpose(data["pos"]) 
-            size = np.transpose(data["size"])
-            self.posxStats.addDataPoints(pos[0])
-            self.posyStats.addDataPoints(pos[1])
-            self.sizexStats.addDataPoints(size[0])
-            self.sizeyStats.addDataPoints(size[1])
     
     def __len__(self):
         'Denotes the number of batches per epoch'
