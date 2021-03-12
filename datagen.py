@@ -41,5 +41,6 @@ trainData, valData = dataPipeline.dataGenerators()
 
 keras.utils.plot_model(model, "model.png", show_shapes=True)
 model.compile(optimizer=opt, loss='mse', run_eagerly=True)
-model.fit(x=trainData, validation_data = valData, epochs = 100)
-model.save('model')
+for i in range(10):
+    model.fit(x=trainData, validation_data = valData, epochs = 100)
+    model.save('model-v' + str(i))

@@ -51,6 +51,8 @@ decoder_input_net_name = 'decoder-input-net'
 encoder_input_mask_name = 'encoder-input-mask'
 decoder_input_mask_name = 'decoder-input-mask'
 
+UNCOMMON_NAME = 'UNCOMMON'
+
 def simpleInputs():
     encoder_input = Input(shape=(None,num_decoder_tokens,), name=encoder_input_name)
     decoder_input = Input(shape=(None,num_decoder_tokens,), name=decoder_input_name)
@@ -131,21 +133,28 @@ def padAutoencoder():
 #     return batchExtend
 
 def replaceTexts(net):
-    return net.replace(' ','_').replace('','Unnamed')
+    return net.replace(' ','_')
 
 class MyTokenizer():
     # Tokenizer class that has net names beyond the word limit set as index 1 rather than index 0. leaving index 0 for masking
     def __init__(self, filters='', num_words=None):
+        self.num_words = num_words
         self.tokenizer = Tokenizer(filters=filters, num_words=num_words)
-        self.uncommon_name = 'UNCOMMON'
-        self.tokenizer.fit_on_texts([self.uncommon_name]) # reserve index 1 as uncommon name leaving 0 as a mask
+        # self.uncommon_name = UNCOMMON_NAME
+        # self.tokenizer.fit_on_texts([self.uncommon_name]) # reserve index 1 as uncommon name leaving 0 as a mask
 
-    def texts_to_sequences(self, texts):
-        # replaces empty strings with uncommon tag name which was fit on texts immediately so will be embedding 1
-        newTexts = list(map(lambda text : text.replace('',self.uncommon_name), texts))
-        self.tokenizer.texts_to_sequences(newTexts)
+    def texts_to_sequences(self, text):
+        seqs = self.tokenizer.texts_to_sequences(text)
+
+        for i, seq in enumerate(seqs):
+            if not seq:
+                seqs[i] = [self.num_words]
+
+        return seqs
     def fit_on_texts(self, texts):
         self.tokenizer.fit_on_texts(texts)
+    def sequences_to_texts(self, seqs):
+        return self.tokenizer.sequences_to_texts(seqs)
 
 class loadable():
     def __init__(self, folderPath):
@@ -249,14 +258,14 @@ def addStartAndEndRows(batch):
 
 def renameUncommonNets(net, commonNets):
     if net not in commonNets:
-        return 'Uncommon'
+        return UNCOMMON_NAME
     else:
         return net
 
 def normalizeAndStandardize(x, stats):
     x = standardize(x, stats.mean(), stats.std())
-    max, min = standardize((stats.max, stats.min), stats.mean(), stats.std()) #rescale mean and std
-    return normalize(x, min, max)
+    maxVal, minVal = standardize((stats.max, stats.min), stats.mean(), stats.std()) #rescale mean and std
+    return normalize(x, minVal, maxVal)
 
 def normalize(x, min, max):
     return (x - min)/(max-min)
