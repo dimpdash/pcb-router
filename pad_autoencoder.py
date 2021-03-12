@@ -6,9 +6,6 @@ from tensorflow import keras
 from tensorflow.keras import layers
 import numpy as np
 from hilbertcurve.hilbertcurve import HilbertCurve
-from tensorflow.python.keras.backend import concatenate
-from tensorflow.python.keras.layers import embeddings
-from tensorflow.python.keras.layers.preprocessing.category_encoding import _NUM_ELEMENTS_NAME
 
 p = 100
 hilbert_curve = HilbertCurve(p, 2)
