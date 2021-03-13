@@ -3,7 +3,6 @@ import numpy as np
 from numpy.core.defchararray import array
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import layers
 import numpy as np
 from hilbertcurve.hilbertcurve import HilbertCurve
 
@@ -19,7 +18,7 @@ Concatenate = keras.layers.Concatenate
 Reshape = keras.layers.Reshape
 Masking = keras.layers.Masking
 pad_sequences = keras.preprocessing.sequence.pad_sequences
-TextVectorization = keras.layers.experimental.preprocessing.TextVectorization
+# TextVectorization = keras.layers.experimental.preprocessing.TextVectorization
 Sequence = keras.utils.Sequence
 Tokenizer = keras.preprocessing.text.Tokenizer
 
@@ -60,6 +59,7 @@ def simpleInputs():
     decoder_input_mask = Input(shape=(None,), name=decoder_input_mask_name, dtype=bool)
     return encoder_input, decoder_input, encoder_input_net, decoder_input_net
 
+
 def inputModel(inputLabel):
     layer_input = Input(shape=(None, num_layers, ), name='layer-num-' + inputLabel) #Passed in as one hot 
     net_input = Input(shape=(1, ), name='net-name-' + inputLabel, dtype=tf.string)
@@ -78,6 +78,7 @@ def inputModel(inputLabel):
     # conc_masked = Masking()(conc)
     return [layer_input, size_input, pos_input,net_input], conc
 
+# Training Model
 def autoencoder(inputs):
     net_embedding = Embedding(num_input_nets_dim + 1, num_net_embedded_dim,mask_zero=True)
     net_embedding_decoder = Embedding(num_input_nets_dim + 1, num_net_embedded_dim,mask_zero=True)
@@ -113,6 +114,12 @@ def padAutoencoder():
 
     pad_out = autoencoder([encoder_input_conc, decoder_input_conc])
     return Model(encoder_input_list + decoder_input_list, pad_out)
+
+# Inference Model
+def encoder_inf():
+    pass
+def decoder_inf():
+    
 
 # def addStartAndEndTags(batch):
 #     batchExtend = np.zeros((batch.shape[0], batch.shape[1] + 2, batch.shape[2] + 2))

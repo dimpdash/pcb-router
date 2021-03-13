@@ -1,9 +1,18 @@
+from utils import setUpLogger
+logger = setUpLogger()
+
 from pad_autoencoder import DataPipeline, autoencoder, inputModel, simpleInputs
 import numpy as np
 from tensorflow import keras
 from scraperTools import getDataFromFile
 import random
 
+
+
+
+
+##### Initalise Model ############# 
+modelFileName = 'model-v'
 Input = keras.layers.Input
 Model = keras.Model
 Tokenizer = keras.preprocessing.text.Tokenizer
@@ -39,8 +48,17 @@ trainData, valData = dataPipeline.dataGenerators()
 
 
 
-keras.utils.plot_model(model, "model.png", show_shapes=True)
-model.compile(optimizer=opt, loss='mse', run_eagerly=True)
-for i in range(10):
-    model.fit(x=trainData, validation_data = valData, epochs = 100)
-    model.save('model-v' + str(i))
+# keras.utils.plot_model(model, "model.png", show_shapes=True)
+
+lower = 2 #set to -1 to start new model 
+upper = 10
+if lower == -1:
+    model.compile(optimizer=opt, loss='mse')
+else: 
+    model = keras.models.load_model(modelFileName + str(lower))
+
+for i in range(lower + 1, upper):
+    logger.info('Beginning iteration %d', i)
+    model.fit(x=trainData, validation_data = valData, epochs = 10)
+    model.save(modelFileName + str(i))
+    logger.info('Finished iteration %d', i)

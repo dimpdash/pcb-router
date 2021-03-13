@@ -1,0 +1,29 @@
+Uncaught exception
+Traceback (most recent call last):
+  File "datagen.py", line 73, in <module>
+    model.load(modelFileName + str(i))
+AttributeError: 'Model' object has no attribute 'load'
+Uncaught exception
+Traceback (most recent call last):
+  File "datagen.py", line 75, in <module>
+    model = keras.models.load_model(modelFileName + str(i))
+NameError: name 'i' is not defined
+Uncaught exception
+Traceback (most recent call last):
+  File "datagen.py", line 75, in <module>
+    model = keras.models.load_model(modelFileName + str(lower))
+  File "/home/azureuser/.local/lib/python3.6/site-packages/tensorflow/python/keras/saving/save.py", line 146, in load_model
+    return hdf5_format.load_model_from_hdf5(filepath, custom_objects, compile)
+  File "/home/azureuser/.local/lib/python3.6/site-packages/tensorflow/python/keras/saving/hdf5_format.py", line 210, in load_model_from_hdf5
+    model_config = json.loads(model_config.decode('utf-8'))
+AttributeError: 'str' object has no attribute 'decode'
+Uncaught exception
+Traceback (most recent call last):
+  File "datagen.py", line 61, in <module>
+    logger.info('Beginning iteration %d', i)
+NameError: name 'logger' is not defined
+Uncaught exception
+Traceback (most recent call last):
+  File "datagen.py", line 61, in <module>
+    logger.info('Beginning iteration %d', i)
+AttributeError: 'NoneType' object has no attribute 'info'
