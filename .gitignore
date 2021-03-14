@@ -1,3 +1,4 @@
 *.data
 *.sav
 *.npy
+*.vscode

@@ -78,7 +78,26 @@ def inputModel(inputLabel):
     # conc_masked = Masking()(conc)
     return [layer_input, size_input, pos_input,net_input], conc
 
-# Training Model
+def encoder(net_embedding, numeric_encoder_input, pad_encoder_input_net, pad_encoder):
+    encoder_net_embedded = net_embedding(pad_encoder_input_net)
+    pad_encoder_input = Concatenate(axis=-1)([encoder_net_embedded, numeric_encoder_input])
+    pad_encoder_input._keras_mask = encoder_net_embedded._keras_mask
+
+    pad_encoder_outputs, state_h, state_c = pad_encoder(pad_encoder_input)
+    pad_encoder_states = [state_h, state_c]
+
+    return pad_encoder_states
+
+def decoder(net_embedding_decoder, numeric_decoder_input, pad_decoder_input_net, LSTM_decoder, Dense_decoder):
+    decoder_net_embedded = net_embedding_decoder(pad_decoder_input_net)
+    pad_decoder_input = Concatenate(axis=-1)([numeric_decoder_input,decoder_net_embedded])
+    pad_decoder_input._keras_mask = decoder_net_embedded._keras_mask
+
+    pad_decoder_outputs, _, _ = pad_decoder(pad_decoder_input, initial_state=pad_encoder_states)
+    pad_decoder_outputs = Dense_decoder(pad_decoder_outputs)
+    return pad_decoder_outputs
+
+###### Training Model #######
 def autoencoder(inputs):
     net_embedding = Embedding(num_input_nets_dim + 1, num_net_embedded_dim,mask_zero=True)
     net_embedding_decoder = Embedding(num_input_nets_dim + 1, num_net_embedded_dim,mask_zero=True)
@@ -87,25 +106,19 @@ def autoencoder(inputs):
     numeric_encoder_input = inputs[0]
     pad_encoder_input_net = inputs[2]
 
-    encoder_net_embedded = net_embedding(pad_encoder_input_net)
-    pad_encoder_input = Concatenate(axis=-1)([encoder_net_embedded, numeric_encoder_input])
-    pad_encoder_input._keras_mask = encoder_net_embedded._keras_mask
-
-    pad_encoder = LSTM(latent_dim, return_state=True, name="pad-encoder")
-    pad_encoder_outputs, state_h, state_c = pad_encoder(pad_encoder_input)
-    pad_encoder_states = [state_h, state_c]
+    pad_encoder = LSTM_encoder(latent_dim, return_state=True, name="pad-encoder")
+    
+    pad_encoder_states = encoder(net_embedding, numeric_encoder_input, pad_encoder_input_net, pad_encoder)
     
     #Decoder
     numeric_decoder_input = inputs[1]
     pad_decoder_input_net = inputs[3]
 
-    decoder_net_embedded = net_embedding_decoder(pad_decoder_input_net)
-    pad_decoder_input = Concatenate(axis=-1)([numeric_decoder_input,decoder_net_embedded])
-    pad_decoder_input._keras_mask = decoder_net_embedded._keras_mask
-
     pad_decoder = LSTM(latent_dim, return_sequences=True, return_state=True, name="pad-decoder")
-    pad_decoder_outputs, _, _ = pad_decoder(pad_decoder_input, initial_state=pad_encoder_states)
-    pad_decoder_outputs = Dense(num_decoder_tokens, activation='relu')(pad_decoder_outputs)
+    dense_decoder =  Dense(num_decoder_tokens, activation='relu')
+
+    pad_decoder_outputs = decoder(net_embedding_decoder, numeric_decoder_input, pad_decoder_input_net, pad_decoder, dense_decoder)
+
     return pad_decoder_outputs
 
 def padAutoencoder():
@@ -115,10 +128,36 @@ def padAutoencoder():
     pad_out = autoencoder([encoder_input_conc, decoder_input_conc])
     return Model(encoder_input_list + decoder_input_list, pad_out)
 
-# Inference Model
-def encoder_inf():
-    pass
-def decoder_inf():
+############ Inference Model ############
+
+
+# Define sampling models
+# Restore the model and construct the encoder and decoder.
+         
+def inferenceModelEncoder(trainingModel):
+    print(trainingModel.summary())
+    numeric_encoder_input = trainingModel.inputs[0]  # input_1
+    pad_encoder_input_net = trainingModel.inputs[2]
+    pad_encoder = trainingModel.get_layer(name='pad-encoder')
+    net_embedding = trainingModel.get_layer(name='embedding')
+
+    encoder_states = encoder(net_embedding, numeric_encoder_input, pad_encoder_input_net, pad_encoder)
+    encoder_model = keras.Model([numeric_encoder_input, pad_encoder_input_net], encoder_states)
+    return encoder_model
+    # decoder_inputs = trainingModel.input[1]  # input_2
+    # decoder_state_input_h = keras.Input(shape=(latent_dim,), name="input_3")
+    # decoder_state_input_c = keras.Input(shape=(latent_dim,), name="input_4")
+    # decoder_states_inputs = [decoder_state_input_h, decoder_state_input_c]
+    # decoder_lstm = trainingModel.layers[3]
+    # decoder_outputs, state_h_dec, state_c_dec = decoder_lstm(
+    #     decoder_inputs, initial_state=decoder_states_inputs
+    # )
+    # decoder_states = [state_h_dec, state_c_dec]
+    # decoder_dense = trainingModel.layers[4]
+    # decoder_outputs = decoder_dense(decoder_outputs)
+    # decoder_model = keras.Model(
+    #     [decoder_inputs] + decoder_states_inputs, [decoder_outputs] + decoder_states
+    # )
     
 
 # def addStartAndEndTags(batch):

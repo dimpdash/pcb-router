@@ -7,10 +7,6 @@ from tensorflow import keras
 from scraperTools import getDataFromFile
 import random
 
-
-
-
-
 ##### Initalise Model ############# 
 modelFileName = 'model-v'
 Input = keras.layers.Input

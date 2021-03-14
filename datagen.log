@@ -27,3 +27,46 @@ Traceback (most recent call last):
   File "datagen.py", line 61, in <module>
     logger.info('Beginning iteration %d', i)
 AttributeError: 'NoneType' object has no attribute 'info'
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 7, in <module>
+    trainingModel = keras.models.load_model(modelFileName)
+NameError: name 'modelFileName' is not defined
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 11, in <module>
+    infModel = inferenceModel(trainingModel)
+TypeError: inferenceModel() missing 1 required positional argument: 'input'
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 5, in <module>
+    from pad_autoencoder import inferenceModel
+ImportError: cannot import name 'inferenceModel' from 'pad_autoencoder' (C:\Users\dimpd\OneDrive\Documents\GitHub\pcb-router\pad_autoencoder.py)
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 11, in <module>
+    infModel = inferenceModelEncoder(trainingModel,1)
+TypeError: inferenceModelEncoder() takes 1 positional argument but 2 were given
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 11, in <module>
+    infModel = inferenceModelEncoder(trainingModel)
+  File "C:\Users\dimpd\OneDrive\Documents\GitHub\pcb-router\pad_autoencoder.py", line 141, in inferenceModelEncoder
+    pad_encoder = trainingModel.getLayer(name='pad-encoder')
+AttributeError: 'Functional' object has no attribute 'getLayer'
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 11, in <module>
+    infModel = inferenceModelEncoder(trainingModel)
+  File "C:\Users\dimpd\OneDrive\Documents\GitHub\pcb-router\pad_autoencoder.py", line 143, in inferenceModelEncoder
+    print(encoder_inputs)
+NameError: name 'encoder_inputs' is not defined
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 11, in <module>
+    infModel = inferenceModelEncoder(trainingModel)
+  File "C:\Users\dimpd\OneDrive\Documents\GitHub\pcb-router\pad_autoencoder.py", line 144, in inferenceModelEncoder
+    encoder_states = encoder(net_embedding, numeric_encoder_input, pad_encoder_input_net, pad_encoder)
+  File "C:\Users\dimpd\OneDrive\Documents\GitHub\pcb-router\pad_autoencoder.py", line 86, in encoder
+    pad_encoder_outputs, state_h, state_c = pad_encoder(pad_encoder_input)
+NameError: name 'pad_encoder' is not defined
