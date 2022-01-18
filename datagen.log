@@ -70,3 +70,223 @@ Traceback (most recent call last):
   File "C:\Users\dimpd\OneDrive\Documents\GitHub\pcb-router\pad_autoencoder.py", line 86, in encoder
     pad_encoder_outputs, state_h, state_c = pad_encoder(pad_encoder_input)
 NameError: name 'pad_encoder' is not defined
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 8, in <module>
+    ids = getIds()
+  File "C:\Users\dimpd\OneDrive\Documents\GitHub\pcb-router\pad_autoencoder.py", line 179, in getIds
+    ids = getDataFromFile("./model data/ids.data")
+NameError: name 'getDataFromFile' is not defined
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 8, in <module>
+    ids = getIds()
+  File "C:\Users\dimpd\OneDrive\Documents\GitHub\pcb-router\pad_autoencoder.py", line 194, in getIds
+    random.shuffle(ids)
+NameError: name 'random' is not defined
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 10, in <module>
+    dataPipeline = pickle.load('dataPipeline_metaData.data')
+TypeError: file must have 'read' and 'readline' attributes
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 10, in <module>
+    fileHandler = open('dataPipeline_metaData.data','r')
+FileNotFoundError: [Errno 2] No such file or directory: 'dataPipeline_metaData.data'
+Uncaught exception
+Traceback (most recent call last):
+  File ".\datagen.py", line 26, in <module>
+    pad_out = autoencoder(inputs)
+  File "C:\Users\dimpd\OneDrive\Documents\GitHub\pcb-router\pad_autoencoder.py", line 112, in autoencoder
+    pad_encoder = LSTM_encoder(latent_dim, return_state=True, name="pad-encoder")
+NameError: name 'LSTM_encoder' is not defined
+Uncaught exception
+Traceback (most recent call last):
+  File ".\datagen.py", line 26, in <module>
+    pad_out = autoencoder(inputs)
+  File "C:\Users\dimpd\OneDrive\Documents\GitHub\pcb-router\pad_autoencoder.py", line 123, in autoencoder
+    pad_decoder_outputs = decoder(net_embedding_decoder, numeric_decoder_input, pad_decoder_input_net, pad_decoder, dense_decoder)
+  File "C:\Users\dimpd\OneDrive\Documents\GitHub\pcb-router\pad_autoencoder.py", line 99, in decoder
+    pad_decoder_outputs, _, _ = pad_decoder(pad_decoder_input, initial_state=pad_encoder_states)
+NameError: name 'pad_decoder' is not defined
+Uncaught exception
+Traceback (most recent call last):
+  File ".\datagen.py", line 26, in <module>
+    pad_out = autoencoder(inputs)
+  File "C:\Users\dimpd\OneDrive\Documents\GitHub\pcb-router\pad_autoencoder.py", line 123, in autoencoder
+    pad_decoder_outputs = decoder(net_embedding_decoder, numeric_decoder_input, pad_decoder_input_net, pad_decoder, dense_decoder)
+  File "C:\Users\dimpd\OneDrive\Documents\GitHub\pcb-router\pad_autoencoder.py", line 99, in decoder
+    pad_decoder_outputs, _, _ = pad_decoder(pad_decoder_input, initial_state=pad_encoder_states)
+NameError: name 'pad_encoder_states' is not defined
+Uncaught exception
+Traceback (most recent call last):
+  File ".\datagen.py", line 30, in <module>
+    dataPipeline.save('dataPipeline_metaData.data')
+  File "C:\Users\dimpd\OneDrive\Documents\GitHub\pcb-router\pad_autoencoder.py", line 272, in save
+    pickle.dump(self, filehandler)
+TypeError: write() argument must be str, not bytes
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 22, in <module>
+    states = infModel.predict()
+TypeError: predict() missing 1 required positional argument: 'x'
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 22, in <module>
+    states = infModel.predict(testData)
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\engine\training.py", line 1629, in predict
+    tmp_batch_outputs = self.predict_function(iterator)
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\eager\def_function.py", line 828, in __call__
+    result = self._call(*args, **kwds)
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\eager\def_function.py", line 871, in _call
+    self._initialize(args, kwds, add_initializers_to=initializers)
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\eager\def_function.py", line 725, in _initialize
+    self._stateful_fn._get_concrete_function_internal_garbage_collected(  # pylint: disable=protected-access
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\eager\function.py", line 2969, in _get_concrete_function_internal_garbage_collected
+    graph_function, _ = self._maybe_define_function(args, kwargs)
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\eager\function.py", line 3361, in _maybe_define_function
+    graph_function = self._create_graph_function(args, kwargs)
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\eager\function.py", line 3196, in _create_graph_function
+    func_graph_module.func_graph_from_py_func(
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\framework\func_graph.py", line 990, in func_graph_from_py_func
+    func_outputs = python_func(*func_args, **func_kwargs)
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\eager\def_function.py", line 634, in wrapped_fn
+    out = weak_wrapped_fn().__wrapped__(*args, **kwds)
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\framework\func_graph.py", line 977, in wrapper
+    raise e.ag_error_metadata.to_exception(e)
+ValueError: in user code:
+
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\engine\training.py:1478 predict_function  *
+        return step_function(self, iterator)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\engine\training.py:1468 step_function  **
+        outputs = model.distribute_strategy.run(run_step, args=(data,))
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\distribute\distribute_lib.py:1259 run
+        return self._extended.call_for_each_replica(fn, args=args, kwargs=kwargs)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\distribute\distribute_lib.py:2730 call_for_each_replica
+        return self._call_for_each_replica(fn, args, kwargs)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\distribute\distribute_lib.py:3417 _call_for_each_replica
+        return fn(*args, **kwargs)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\engine\training.py:1461 run_step  **
+        outputs = model.predict_step(data)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\engine\training.py:1434 predict_step
+        return self(x, training=False)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\engine\base_layer.py:998 __call__
+        input_spec.assert_input_compatibility(self.input_spec, inputs, self.name)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\engine\input_spec.py:204 assert_input_compatibility
+        raise ValueError('Layer ' + layer_name + ' expects ' +
+
+    ValueError: Layer model expects 2 input(s), but it received 5 input tensors. Inputs received: [<tf.Tensor 'IteratorGetNext:0' shape=(None, 24, 8) dtype=float32>, <tf.Tensor 'IteratorGetNext:1' shape=(None, 24) dtype=float32>, <tf.Tensor 'IteratorGetNext:2' shape=(None, 25, 8) dtype=float32>, <tf.Tensor 'IteratorGetNext:3' shape=(None, 25) dtype=float32>, <tf.Tensor 'IteratorGetNext:4' shape=(None, 24, 8) dtype=float32>]
+
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 65, in <module>
+    output = decode_sequence(states)
+  File ".\modelInference.py", line 32, in decode_sequence
+    states_value = encoder_model.predict(input_seq)
+NameError: name 'encoder_model' is not defined
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 65, in <module>
+    output = decode_sequence(states)
+  File ".\modelInference.py", line 32, in decode_sequence
+    states_value = infEncoderModel.predict(input_seq)
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\engine\training.py", line 1629, in predict
+    tmp_batch_outputs = self.predict_function(iterator)
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\eager\def_function.py", line 828, in __call__
+    result = self._call(*args, **kwds)
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\eager\def_function.py", line 862, in _call
+    results = self._stateful_fn(*args, **kwds)
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\eager\function.py", line 2941, in __call__
+    filtered_flat_args) = self._maybe_define_function(args, kwargs)
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\eager\function.py", line 3357, in _maybe_define_function
+    return self._define_function_with_shape_relaxation(
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\eager\function.py", line 3279, in _define_function_with_shape_relaxation
+    graph_function = self._create_graph_function(
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\eager\function.py", line 3196, in _create_graph_function
+    func_graph_module.func_graph_from_py_func(
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\framework\func_graph.py", line 990, in func_graph_from_py_func
+    func_outputs = python_func(*func_args, **func_kwargs)
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\eager\def_function.py", line 634, in wrapped_fn
+    out = weak_wrapped_fn().__wrapped__(*args, **kwds)
+  File "C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\framework\func_graph.py", line 977, in wrapper
+    raise e.ag_error_metadata.to_exception(e)
+ValueError: in user code:
+
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\engine\training.py:1478 predict_function  *
+        return step_function(self, iterator)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\engine\training.py:1468 step_function  **
+        outputs = model.distribute_strategy.run(run_step, args=(data,))
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\distribute\distribute_lib.py:1259 run
+        return self._extended.call_for_each_replica(fn, args=args, kwargs=kwargs)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\distribute\distribute_lib.py:2730 call_for_each_replica
+        return self._call_for_each_replica(fn, args, kwargs)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\distribute\distribute_lib.py:3417 _call_for_each_replica
+        return fn(*args, **kwargs)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\engine\training.py:1461 run_step  **
+        outputs = model.predict_step(data)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\engine\training.py:1434 predict_step
+        return self(x, training=False)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\engine\base_layer.py:1012 __call__
+        outputs = call_fn(inputs, *args, **kwargs)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\engine\functional.py:424 call
+        return self._run_internal_graph(
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\engine\functional.py:560 _run_internal_graph
+        outputs = node.layer(*args, **kwargs)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\engine\base_layer.py:1012 __call__
+        outputs = call_fn(inputs, *args, **kwargs)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\layers\merge.py:183 call
+        return self._merge_function(inputs)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\layers\merge.py:522 _merge_function
+        return K.concatenate(inputs, axis=self.axis)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\util\dispatch.py:201 wrapper
+        return target(*args, **kwargs)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\keras\backend.py:2989 concatenate
+        return array_ops.concat([to_dense(x) for x in tensors], axis)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\util\dispatch.py:201 wrapper
+        return target(*args, **kwargs)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\ops\array_ops.py:1677 concat
+        return gen_array_ops.concat_v2(values=values, axis=axis, name=name)
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\ops\gen_array_ops.py:1206 concat_v2
+        _, _, _op, _outputs = _op_def_library._apply_op_helper(
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\framework\op_def_library.py:748 _apply_op_helper
+        op = g._create_op_internal(op_type_name, inputs, dtypes=None,
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\framework\func_graph.py:590 _create_op_internal
+        return super(FuncGraph, self)._create_op_internal(  # pylint: disable=protected-access
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\framework\ops.py:3528 _create_op_internal
+        ret = Operation(
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\framework\ops.py:2015 __init__
+        self._c_op = _create_c_op(self._graph, node_def, inputs,
+    C:\Users\dimpd\AppData\Roaming\Python\Python38\site-packages\tensorflow\python\framework\ops.py:1856 _create_c_op
+        raise ValueError(str(e))
+
+    ValueError: Shape must be rank 3 but is rank 2 for '{{node model/concatenate/concat}} = ConcatV2[N=2, T=DT_FLOAT, Tidx=DT_INT32](model/embedding/embedding_lookup/Identity_1, IteratorGetNext, model/concatenate/concat/axis)' with input shapes: [?,60,10], [?,60], [].
+
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 65, in <module>
+    output = decode_sequence(encoder_input)
+  File ".\modelInference.py", line 35, in decode_sequence
+    target_seq = np.zeros((1, 1, num_decoder_tokens))
+NameError: name 'np' is not defined
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 66, in <module>
+    output = decode_sequence(encoder_input)
+  File ".\modelInference.py", line 36, in decode_sequence
+    target_seq = np.zeros((1, 1, num_decoder_tokens))
+NameError: name 'num_decoder_tokens' is not defined
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 67, in <module>
+    output = decode_sequence(encoder_input)
+  File ".\modelInference.py", line 39, in decode_sequence
+    target_seq[0, 0, target_token_index["\t"]] = 1.0
+NameError: name 'target_token_index' is not defined
+Uncaught exception
+Traceback (most recent call last):
+  File ".\modelInference.py", line 68, in <module>
+    output = decode_sequence(encoder_input)
+  File ".\modelInference.py", line 40, in decode_sequence
+    target_seq[0, 0, target_token_index["\t"]] = 1.0
+NameError: name 'target_token_index' is not defined

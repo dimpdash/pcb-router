@@ -5,6 +5,9 @@ import tensorflow as tf
 from tensorflow import keras
 import numpy as np
 from hilbertcurve.hilbertcurve import HilbertCurve
+import pickle
+from scraperTools import getDataFromFile
+import random
 
 p = 100
 hilbert_curve = HilbertCurve(p, 2)
@@ -46,6 +49,8 @@ encoder_input_net_name = 'encoder-input-net'
 decoder_input_net_name = 'decoder-input-net'
 encoder_input_mask_name = 'encoder-input-mask'
 decoder_input_mask_name = 'decoder-input-mask'
+state_h_name = "state_h_input"
+state_c_name = "state_c_input"
 
 UNCOMMON_NAME = 'UNCOMMON'
 
@@ -88,7 +93,7 @@ def encoder(net_embedding, numeric_encoder_input, pad_encoder_input_net, pad_enc
 
     return pad_encoder_states
 
-def decoder(net_embedding_decoder, numeric_decoder_input, pad_decoder_input_net, LSTM_decoder, Dense_decoder):
+def decoder(net_embedding_decoder, numeric_decoder_input, pad_decoder_input_net, pad_decoder, Dense_decoder, pad_encoder_states):
     decoder_net_embedded = net_embedding_decoder(pad_decoder_input_net)
     pad_decoder_input = Concatenate(axis=-1)([numeric_decoder_input,decoder_net_embedded])
     pad_decoder_input._keras_mask = decoder_net_embedded._keras_mask
@@ -106,7 +111,7 @@ def autoencoder(inputs):
     numeric_encoder_input = inputs[0]
     pad_encoder_input_net = inputs[2]
 
-    pad_encoder = LSTM_encoder(latent_dim, return_state=True, name="pad-encoder")
+    pad_encoder = LSTM(latent_dim, return_state=True, name="pad-encoder")
     
     pad_encoder_states = encoder(net_embedding, numeric_encoder_input, pad_encoder_input_net, pad_encoder)
     
@@ -117,7 +122,7 @@ def autoencoder(inputs):
     pad_decoder = LSTM(latent_dim, return_sequences=True, return_state=True, name="pad-decoder")
     dense_decoder =  Dense(num_decoder_tokens, activation='relu')
 
-    pad_decoder_outputs = decoder(net_embedding_decoder, numeric_decoder_input, pad_decoder_input_net, pad_decoder, dense_decoder)
+    pad_decoder_outputs = decoder(net_embedding_decoder, numeric_decoder_input, pad_decoder_input_net, pad_decoder, dense_decoder, pad_encoder_states)
 
     return pad_decoder_outputs
 
@@ -135,7 +140,6 @@ def padAutoencoder():
 # Restore the model and construct the encoder and decoder.
          
 def inferenceModelEncoder(trainingModel):
-    print(trainingModel.summary())
     numeric_encoder_input = trainingModel.inputs[0]  # input_1
     pad_encoder_input_net = trainingModel.inputs[2]
     pad_encoder = trainingModel.get_layer(name='pad-encoder')
@@ -144,6 +148,24 @@ def inferenceModelEncoder(trainingModel):
     encoder_states = encoder(net_embedding, numeric_encoder_input, pad_encoder_input_net, pad_encoder)
     encoder_model = keras.Model([numeric_encoder_input, pad_encoder_input_net], encoder_states)
     return encoder_model
+
+def inferenceModelDecoder(trainingModel):
+    state_h = Input(shape=(latent_dim), name=state_h_name)
+    state_c = Input(shape=(latent_dim), name=state_c_name)
+    states = [state_h, state_c]
+    numeric_decoder_input = trainingModel.inputs[1] # input_2
+    pad_decoder_input_net = trainingModel.inputs[3]
+    pad_decoder = trainingModel.get_layer(name='pad-decoder')
+    dense_decoder = trainingModel.get_layer(name='dense')
+    net_embedding = trainingModel.get_layer(name='embedding_1')
+
+    decoder_states = decoder(net_embedding, numeric_decoder_input, pad_decoder_input_net, pad_decoder, dense_decoder, states)
+    decoder_model = keras.Model([numeric_decoder_input, pad_decoder_input_net, state_h, state_c], decoder_states)
+    return decoder_model  
+
+
+
+
     # decoder_inputs = trainingModel.input[1]  # input_2
     # decoder_state_input_h = keras.Input(shape=(latent_dim,), name="input_3")
     # decoder_state_input_c = keras.Input(shape=(latent_dim,), name="input_4")
@@ -174,6 +196,25 @@ def inferenceModelEncoder(trainingModel):
 #         batchExtend[i][:-1, 1:] = singBatch
 #         batchExtend[i][-1, 0] = 1
 #     return batchExtend
+def getIds():
+    ids = getDataFromFile("./model data/ids.data")
+
+    blackListedPCBs = []
+
+    for id in ids:
+        pcb = np.load("./model data/pads/" + id + ".npy", allow_pickle=True)
+        if len(pcb) == 0:
+            blackListedPCBs.append(id)
+
+    print(blackListedPCBs)
+
+    for blackListed in blackListedPCBs:
+        ids.remove(blackListed)
+    
+    random.shuffle(ids)
+
+    return ids
+
 
 def replaceTexts(net):
     return net.replace(' ','_')
@@ -245,6 +286,10 @@ class DataPipeline(loadable):
         self.trainData = DataGenerator(trainIds, stats=self.stats, batch_size = batchSize, tokenizer=self.tokenizer, folderPath=self.folderPath)
         self.valData = DataGenerator(valIds, stats=self.stats, batch_size = batchSize, tokenizer=self.tokenizer, folderPath=self.folderPath)
 
+    def save(self, fileName):
+        filehandler = open(fileName, 'wb') 
+        pickle.dump(self, filehandler)
+    
     def dataGenerators(self):
         return self.trainData, self.valData
 
@@ -420,7 +465,7 @@ class DataGenerator(Sequence, loadable):
             decoderInput.append(np.concatenate((startTag, pcbFormatted, padding)))
             y.append(np.concatenate((pcbFormatted, endTag, padding)))
             encoderInputNet.append(np.concatenate(([1],net,[1],paddingNet)))
-            decoderInputNet.append(np.concatenate(([1],net,paddingNet)))
+            '[;p]'.append(np.concatenate(([1],net,paddingNet)))
             # encoderInputMask[i][:pcbFormatted.shape[0] + 2] = True # add 2 for end and start tage
             # decoderInputMask[i][:pcbFormatted.shape[0]  + 1] = True # add one for start tag
             
